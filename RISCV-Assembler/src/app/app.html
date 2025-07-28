@@ -1,0 +1,25 @@
+<main>
+  <nav class="w-full bg-red-500 flex flex-row h-[50px] text-center items-center p-2">
+      <span class="h-fit text-white">RISCV-Assembler</span>
+  </nav>
+  <div class="p-[12px]">
+    <div class="h-[25px] bg-green-500 flex flex-row items-center justify-center">
+      <select class=" bg-gray-500">
+        <option>To Binary</option>
+        <option>To VHDL</option>
+        <option>To Verilog</option>
+      </select>
+    </div>
+    <div class=" flex flex-row gap-2 h-[calc(100vh-100px)]">
+      <textarea 
+        class="border-red-500 border-2 bg-gray-500 h-50 w-[50%] resize-none h-full"
+        placeholder="codigo aqui">
+      </textarea>
+      <p class="border-red-500 border-2 bg-gray-500 h-50 w-[50%] resize-none h-full">
+        Code here
+      </p>
+    </div>
+  </div>
+</main>
+
+<router-outlet />
