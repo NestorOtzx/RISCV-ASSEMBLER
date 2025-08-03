@@ -4,19 +4,25 @@
   </nav>
   <div class="p-[12px]">
     <div class="h-[25px] bg-green-500 flex flex-row items-center justify-center">
-      <select class=" bg-gray-500">
-        <option>To Binary</option>
-        <option>To VHDL</option>
-        <option>To Verilog</option>
+      <select 
+        class="bg-gray-500"
+        (change)="onFormatChange($event)">
+        <option value="binary">To Binary</option>
+        <option value="hexadecimal">To Hexadecimal</option>
+        <option value="vhdl">To VHDL</option>
+        <option value="verilog">To Verilog</option>
       </select>
     </div>
-    <div class=" flex flex-row gap-2 h-[calc(100vh-100px)]">
+    <div class="flex flex-row gap-2 h-[calc(100vh-100px)]">
       <textarea 
-        class="border-red-500 border-2 bg-gray-500 h-50 w-[50%] resize-none h-full"
-        placeholder="codigo aqui">
+        class="border-red-500 border-2 bg-gray-500 w-[50%] resize-none h-full"
+        placeholder="codigo aqui"
+        [ngModel]="inputText()"
+        (ngModelChange)="inputText.set($event)">
       </textarea>
-      <p class="border-red-500 border-2 bg-gray-500 h-50 w-[50%] resize-none h-full">
-        Code here
+
+      <p class="border-red-500 border-2 bg-gray-500 w-[50%] resize-none h-full p-2 whitespace-pre-wrap">
+        {{ outputText() }}
       </p>
     </div>
   </div>
