@@ -1,13 +1,16 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { assembleITypeProgressive } from './assembler/encoders/i-type';
-import { assembleBTypeProgressive } from './assembler/encoders/b-type';
-import { assembleJTypeProgressive } from './assembler/encoders/j-type';
+import { saveAs } from 'file-saver';
+
+// Importa tus ensambladores
 import { assembleRTypeProgressive } from './assembler/encoders/r-type';
+import { assembleITypeProgressive } from './assembler/encoders/i-type';
 import { assembleSTypeProgressive } from './assembler/encoders/s-type';
+import { assembleBTypeProgressive } from './assembler/encoders/b-type';
 import { assembleSpecialITypeProgressive } from './assembler/encoders/special-i-type';
 import { assembleUTypeProgressive } from './assembler/encoders/u-type';
+import { assembleJTypeProgressive } from './assembler/encoders/j-type';
 
 @Component({
   selector: 'app-root',
@@ -16,39 +19,110 @@ import { assembleUTypeProgressive } from './assembler/encoders/u-type';
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App {
+export class App implements AfterViewInit {
   inputText = signal('');
   selectedFormat = signal('binary');
+  lineNumbers = signal<number[]>([1]);
+
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('outputScrollContainer') outputScrollContainer!: ElementRef<HTMLDivElement>;
+
+  ngAfterViewInit() {
+    this.updateLineNumbers();
+  }
 
   outputText = computed(() => {
     const lines = this.inputText().split('\n');
     const format = this.selectedFormat();
-
     return lines.map(line => {
-      let binary = assembleRTypeProgressive(line.trim());
-      if (!binary) binary = assembleITypeProgressive(line.trim());
-      if (!binary) binary = assembleSTypeProgressive(line.trim());
-      if (!binary) binary = assembleBTypeProgressive(line.trim());
-      if (!binary) binary = assembleSpecialITypeProgressive(line.trim());
-      if (!binary) binary = assembleUTypeProgressive(line.trim());
-      if (!binary) binary = assembleJTypeProgressive(line.trim());
+      let binary = assembleRTypeProgressive(line.trim())
+        || assembleITypeProgressive(line.trim())
+        || assembleSTypeProgressive(line.trim())
+        || assembleBTypeProgressive(line.trim())
+        || assembleSpecialITypeProgressive(line.trim())
+        || assembleUTypeProgressive(line.trim())
+        || assembleJTypeProgressive(line.trim());
+
       if (!binary) return line;
 
-      if (format === 'binary') {
-        return binary;
-      } else if (format === 'hexadecimal') {
-        const hex = parseInt(binary, 2).toString(16).padStart(8, '0');
-        return `0x${hex}`;
+      switch (format) {
+        case 'binary': return binary;
+        case 'hexadecimal': return `0x${parseInt(binary, 2).toString(16).padStart(8, '0')}`;
+        case 'vhdl': return `x"${parseInt(binary, 2).toString(16).padStart(8, '0')}"`;
+        case 'verilog': return `32'b${binary}`;
+        default: return line;
       }
-
-      return line;
     }).join('\n');
   });
+
+  onInput() {
+    const lines = this.inputText().split('\n').length;
+    const numbers = Array.from({ length: lines }, (_, i) => i + 1);
+    this.lineNumbers.set(numbers);
+  }
+
+  syncScroll(event: Event) {
+    const target = event.target as HTMLElement;
+    const other = this.outputScrollContainer.nativeElement;
+    if (Math.abs(target.scrollTop - other.scrollTop) > 1) {
+      other.scrollTop = target.scrollTop;
+    }
+  }
+
+  syncOutputScroll(event: Event) {
+    const target = event.target as HTMLElement;
+    const other = this.inputScrollContainer.nativeElement;
+    if (Math.abs(target.scrollTop - other.scrollTop) > 1) {
+      other.scrollTop = target.scrollTop;
+    }
+  }
 
   onFormatChange(event: Event) {
     const selectElement = event.target as HTMLSelectElement;
     this.selectedFormat.set(selectElement.value);
-    console.log('Formato seleccionado:', selectElement.value);
+  }
+
+  onImportFile() {
+    this.fileInput.nativeElement.click();
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const content = (reader.result as string).replace(/\r/g, '');
+      this.inputText.set(content);
+      this.updateLineNumbers();
+    };
+
+    reader.readAsText(file);
+  }
+
+  copyOutput() {
+    navigator.clipboard.writeText(this.outputText()).then(() => {
+      alert('Output copied to clipboard!');
+    });
+  }
+
+  downloadOutput() {
+    const format = this.selectedFormat();
+    let extension = 'txt';
+    if (format === 'vhdl') extension = 'vhd';
+    else if (format === 'verilog') extension = 'v';
+    else if (format === 'hexadecimal') extension = 'hex';
+
+    const blob = new Blob([this.outputText()], { type: 'text/plain;charset=utf-8' });
+    saveAs(blob, `output.${extension}`);
+  }
+
+  private updateLineNumbers() {
+    const lines = this.inputText().split('\n').length;
+    const numbers = Array.from({ length: lines }, (_, i) => i + 1);
+    this.lineNumbers.set(numbers);
   }
 }
-
