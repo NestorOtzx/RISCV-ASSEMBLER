@@ -4,14 +4,23 @@
   </nav>
 
   <!-- TOOLBAR -->
-  <div class="flex flex-wrap justify-between items-center p-4 gap-2">
+  <div class="flex flex-wrap justify-between items-center p-2 gap-2">
     <button (click)="fileInput.click()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Import</button>
-    <select class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onFormatChange($event)">
-      <option value="binary">To Binary</option>
-      <option value="hexadecimal">To Hexadecimal</option>
-      <option value="vhdl">To VHDL</option>
-      <option value="verilog">To Verilog</option>
-    </select>
+    <div class="flex flex-row gap-2">
+      <select [(ngModel)]="selectedInputFormat" class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onInputFormatChange($event)">
+        <option value="riscv">RISCV</option>
+        <option value="binary">Binary</option>
+        <option value="hexadecimal">Hexadecimal</option>
+      </select>
+      <button (click)="switchFormats()" class="bg-gray-700 border border-gray-500 p-1 px-2 rounded flex justify-center items-center">
+        <span class="-mt-[3px]">↔</span>
+      </button>
+      <select [(ngModel)]="selectedOutputFormat" class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onOutputFormatChange($event)">
+        <option value="binary">Binary</option>
+        <option value="riscv">RISCV</option>
+        <option value="hexadecimal">Hexadecimal</option>
+      </select>
+    </div>
     <div class="flex gap-2">
       <button (click)="copyOutput()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded">Copy</button>
       <button (click)="downloadOutput()" class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded">Download</button>
@@ -34,7 +43,8 @@
           class="flex-1 bg-transparent text-white p-2 resize-none outline-none font-mono leading-[1.5rem] w-full h-full overflow-hidden"
           [(ngModel)]="inputText"
           (input)="onInput()"
-          spellcheck="false">
+          spellcheck="false"
+        >
         </textarea>
       </div>
       <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
@@ -50,9 +60,7 @@
           }
         </div>
         <!-- Output Preformatted Text -->
-        <pre class="flex-1 text-white pt-2 whitespace-pre-wrap font-mono leading-[1.5rem]">
-{{ outputText() }}
-        </pre>
+        <pre class="flex-1 text-white pt-2 pl-2 whitespace-pre-wrap font-mono leading-[1.5rem]">{{outputText()}}</pre>
       </div>
     </div>
   </div>

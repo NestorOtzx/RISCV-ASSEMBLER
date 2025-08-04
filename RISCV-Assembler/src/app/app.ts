@@ -1,4 +1,4 @@
-import { Component, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, signal, computed, ViewChild, ElementRef, AfterViewInit, Signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { saveAs } from 'file-saver';
@@ -21,7 +21,9 @@ import { assembleJTypeProgressive } from './assembler/encoders/j-type';
 })
 export class App implements AfterViewInit {
   inputText = signal('');
-  selectedFormat = signal('binary');
+  selectedOutputFormat = signal('binary');
+  selectedInputFormat = signal('riscv');
+
   lineNumbers = signal<number[]>([1]);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -32,9 +34,7 @@ export class App implements AfterViewInit {
     this.updateLineNumbers();
   }
 
-  outputText = computed(() => {
-    const lines = this.inputText().split('\n');
-    const format = this.selectedFormat();
+  RISCV_to_binary(lines: Array<string>, format : string) {
     return lines.map(line => {
       let binary = assembleRTypeProgressive(line.trim())
         || assembleITypeProgressive(line.trim())
@@ -54,6 +54,12 @@ export class App implements AfterViewInit {
         default: return line;
       }
     }).join('\n');
+  }
+
+  outputText = computed(() => {
+    const lines = this.inputText().toLowerCase().split('\n');
+    const format = this.selectedOutputFormat();
+    return this.RISCV_to_binary(lines, format);
   });
 
   onInput() {
@@ -78,9 +84,59 @@ export class App implements AfterViewInit {
     }
   }
 
-  onFormatChange(event: Event) {
+  switchFormats()
+  {
+    const currInput = this.selectedInputFormat();
+    const aux =  this.selectedInputFormat();
+    const currOutput = this.selectedOutputFormat();
+    console.log("switch formats ", currInput, aux, currOutput)
+    this.selectedInputFormat.set(currOutput);
+    this.selectedOutputFormat.set(aux);
+    this.updateInputFormats(currInput, currOutput);
+  }
+
+  onOutputFormatChange(event: Event) {
     const selectElement = event.target as HTMLSelectElement;
-    this.selectedFormat.set(selectElement.value);
+    this.selectedOutputFormat.set(selectElement.value);
+  }
+
+  onInputFormatChange(event: Event) {
+    const selectElement = event.target as HTMLSelectElement;
+    console.log("Changing input from: ", this.selectedInputFormat(), " to:", selectElement.value)
+    const prev = this.selectedInputFormat();
+    const current = selectElement.value;
+    this.updateInputFormats(prev, current);
+    this.selectedInputFormat.set(selectElement.value);
+  }
+
+  updateInputFormats(prev: string, current: string)
+  {
+    if (prev !== current)
+    {
+      if (prev === "riscv" && current == "binary")
+      {
+        const lines = this.inputText().toLowerCase().split('\n');
+        const format = "binary";
+        this.inputText.set(this.RISCV_to_binary(lines, format)); 
+      } else if (prev === "riscv" && current == "hexadecimal")
+      {
+        const lines = this.inputText().toLowerCase().split('\n');
+        const format = "hexadecimal";
+        this.inputText.set(this.RISCV_to_binary(lines, format));
+      } else if (prev === "binary" && current == "riscv")
+      {
+
+      } else if (prev === "binary" && current == "hexadecimal")
+      {
+
+      } else if (prev === "hexadecimal" && current == "binary")
+      {
+
+      } else if (prev === "hexadecimal" && current == "riscv")
+      {
+
+      }
+    }
   }
 
   onImportFile() {
@@ -110,7 +166,7 @@ export class App implements AfterViewInit {
   }
 
   downloadOutput() {
-    const format = this.selectedFormat();
+    const format = this.selectedOutputFormat();
     let extension = 'txt';
     if (format === 'vhdl') extension = 'vhd';
     else if (format === 'verilog') extension = 'v';
