@@ -31,22 +31,7 @@
   <div class="flex flex-col md:flex-row h-[calc(100%-7.5rem)] p-4 gap-4">
     <!-- INPUT SECTION -->
     <div class="flex flex-col md:w-1/2 w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono">
-      <div class="flex overflow-auto w-full h-full" (scroll)="syncScroll($event)" #inputScrollContainer>
-        <!-- Line Numbers -->
-        <div class="bg-gray-900  text-gray-400 text-right pt-2 select-none w-10 leading-[1.5rem] shrink-0">
-          @for (line of lineNumbers(); track line) {
-            <div class="bg-gray-900 pr-2">{{ line }}</div>
-          }
-        </div>
-        <!-- Textarea -->
-        <textarea
-          class="flex-1 bg-transparent text-white p-2 resize-none outline-none font-mono leading-[1.5rem] w-full h-full overflow-hidden"
-          [(ngModel)]="inputText"
-          (input)="onInput()"
-          spellcheck="false"
-        >
-        </textarea>
-      </div>
+      <app-text-editor></app-text-editor>
       <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
     </div>
 

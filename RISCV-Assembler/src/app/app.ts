@@ -1,6 +1,7 @@
 import { Component, signal, computed, ViewChild, ElementRef, AfterViewInit, Signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { TextEditor } from './text-editor/text-editor';
 import { saveAs } from 'file-saver';
 
 // Importa tus ensambladores
@@ -15,7 +16,7 @@ import { assembleJTypeProgressive } from './assembler/encoders/j-type';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, FormsModule],
+  imports: [RouterOutlet, FormsModule, TextEditor],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

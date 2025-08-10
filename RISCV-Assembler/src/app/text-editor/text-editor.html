@@ -1,0 +1,17 @@
+<div class="flex overflow-auto w-full h-full">
+  <!-- Números de línea -->
+  <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none w-10 leading-[1.5rem] shrink-0">
+    @for (line of lines; track line) {
+      <div class="bg-gray-900 pr-2">{{ line }}</div>
+    }
+  </div>
+
+  <!-- Editor -->
+  <div
+    #editor
+    class="flex-1 bg-transparent text-white p-2 font-mono leading-[1.5rem] outline-none"
+    contenteditable="true"
+    spellcheck="false"
+    (keydown)="onKeyDown($event)"
+  ></div>
+</div>
