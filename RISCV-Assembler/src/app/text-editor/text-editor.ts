@@ -26,7 +26,7 @@ export class TextEditor implements AfterViewInit {
     this.editor.nativeElement.addEventListener('paste', (event: ClipboardEvent) => {
       event.preventDefault();
       const text = event.clipboardData?.getData('text') ?? '';
-      this.insertTextAtCursor(text);
+      this.insertSanitizedText(text);
     });
   }
 
@@ -66,14 +66,12 @@ export class TextEditor implements AfterViewInit {
         if (
           range.startContainer.nodeType === Node.TEXT_NODE &&
           (range.startContainer.nodeValue ?? '') === this.ZWSP &&
-          range.startOffset === 1 // caret al final del ZWSP
+          range.startOffset > 0
         ) {
           event.preventDefault();
 
-          // Borrar ZWSP actual
+          // Eliminar ZWSP y posible salto anterior
           range.startContainer.nodeValue = '';
-
-          // Borrar el salto de línea anterior si existe
           const br = this.findPreviousBr(range.startContainer);
           if (br) {
             br.remove();
@@ -86,6 +84,7 @@ export class TextEditor implements AfterViewInit {
     }
   }
 
+  /** Inserta texto puro en la posición del cursor */
   insertTextAtCursor(text: string) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -101,7 +100,21 @@ export class TextEditor implements AfterViewInit {
     this.updateLineCount();
   }
 
-  insertLineBreak() {
+  /** Inserta texto procesado desde un pegado, garantizando ZWSP en líneas vacías */
+  insertSanitizedText(text: string) {
+    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+    lines.forEach((line, index) => {
+      if (index > 0) {
+        this.insertLineBreak(false); // false = no actualizar contador aún
+      }
+      this.insertTextAtCursor(line || this.ZWSP);
+    });
+
+    this.updateLineCount();
+  }
+
+  insertLineBreak(updateCounter = true) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
 
@@ -121,7 +134,7 @@ export class TextEditor implements AfterViewInit {
     sel.removeAllRanges();
     sel.addRange(range);
 
-    this.updateLineCount();
+    if (updateCounter) this.updateLineCount();
   }
 
   private findPreviousBr(node: Node): HTMLBRElement | null {
