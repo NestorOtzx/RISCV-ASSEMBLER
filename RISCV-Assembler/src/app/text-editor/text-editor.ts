@@ -13,13 +13,13 @@ export class TextEditor implements AfterViewInit {
   private readonly ZWSP = '\u200B'; // Carácter invisible
 
   ngAfterViewInit() {
-    // Iniciar con una línea vacía real
-    this.editor.nativeElement.innerHTML = this.ZWSP;
-    this.placeCaretAtEnd();
+    // Línea inicial vacía con marcador
+    this.setEmptyLine();
 
     this.updateLineCount();
 
     this.editor.nativeElement.addEventListener('input', () => {
+      this.cleanInvisibleSelection();
       this.updateLineCount();
     });
 
@@ -62,21 +62,18 @@ export class TextEditor implements AfterViewInit {
       if (sel && sel.rangeCount > 0) {
         const range = sel.getRangeAt(0);
 
-        // Si estamos en una línea vacía con solo ZWSP
+        // Línea vacía con ZWSP
         if (
           range.startContainer.nodeType === Node.TEXT_NODE &&
           (range.startContainer.nodeValue ?? '') === this.ZWSP &&
           range.startOffset > 0
         ) {
           event.preventDefault();
-
-          // Eliminar ZWSP y posible salto anterior
           range.startContainer.nodeValue = '';
           const br = this.findPreviousBr(range.startContainer);
           if (br) {
             br.remove();
           }
-
           this.updateLineCount();
           return;
         }
@@ -84,7 +81,7 @@ export class TextEditor implements AfterViewInit {
     }
   }
 
-  /** Inserta texto puro en la posición del cursor */
+  /** Inserta texto en cursor */
   insertTextAtCursor(text: string) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -97,20 +94,22 @@ export class TextEditor implements AfterViewInit {
     sel.removeAllRanges();
     sel.addRange(range);
 
+    this.cleanInvisibleSelection();
     this.updateLineCount();
   }
 
-  /** Inserta texto procesado desde un pegado, garantizando ZWSP en líneas vacías */
+  /** Inserta texto pegado con limpieza */
   insertSanitizedText(text: string) {
     const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
 
     lines.forEach((line, index) => {
       if (index > 0) {
-        this.insertLineBreak(false); // false = no actualizar contador aún
+        this.insertLineBreak(false);
       }
       this.insertTextAtCursor(line || this.ZWSP);
     });
 
+    this.cleanInvisibleSelection();
     this.updateLineCount();
   }
 
@@ -124,7 +123,6 @@ export class TextEditor implements AfterViewInit {
     range.deleteContents();
     range.insertNode(br);
 
-    // Nueva línea con ZWSP
     const zwspNode = document.createTextNode(this.ZWSP);
     br.after(zwspNode);
 
@@ -134,7 +132,10 @@ export class TextEditor implements AfterViewInit {
     sel.removeAllRanges();
     sel.addRange(range);
 
-    if (updateCounter) this.updateLineCount();
+    if (updateCounter) {
+      this.cleanInvisibleSelection();
+      this.updateLineCount();
+    }
   }
 
   private findPreviousBr(node: Node): HTMLBRElement | null {
@@ -158,5 +159,28 @@ export class TextEditor implements AfterViewInit {
 
     sel?.removeAllRanges();
     sel?.addRange(range);
+  }
+
+  /** Inicializa con línea vacía invisible */
+  private setEmptyLine() {
+    const span = document.createElement('span');
+    span.textContent = this.ZWSP;
+    span.style.userSelect = 'none';
+    this.editor.nativeElement.innerHTML = '';
+    this.editor.nativeElement.appendChild(span);
+    this.placeCaretAtEnd();
+  }
+
+  /** Evita que las líneas vacías se muestren como seleccionadas */
+  private cleanInvisibleSelection() {
+    const childNodes = Array.from(this.editor.nativeElement.childNodes);
+    for (const node of childNodes) {
+      if (node.nodeType === Node.TEXT_NODE && node.nodeValue === this.ZWSP) {
+        const span = document.createElement('span');
+        span.textContent = this.ZWSP;
+        span.style.userSelect = 'none';
+        node.replaceWith(span);
+      }
+    }
   }
 }
