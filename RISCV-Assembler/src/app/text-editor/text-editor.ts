@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, QueryList, DebugEventListener } from '@angular/core';
 
 @Component({
   selector: 'app-text-editor',
@@ -9,178 +9,44 @@ import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 export class TextEditor implements AfterViewInit {
   @ViewChild('editor', { static: true }) editor!: ElementRef<HTMLDivElement>;
 
+  constructor(private elementRef: ElementRef) {}
+
   lines: number[] = [1];
-  private readonly ZWSP = '\u200B'; // Carácter invisible
 
   ngAfterViewInit() {
-    // Línea inicial vacía con marcador
-    this.setEmptyLine();
-
     this.updateLineCount();
 
     this.editor.nativeElement.addEventListener('input', () => {
-      this.cleanInvisibleSelection();
+      console.log("INPUT");
       this.updateLineCount();
     });
 
     this.editor.nativeElement.addEventListener('paste', (event: ClipboardEvent) => {
       event.preventDefault();
-      const text = event.clipboardData?.getData('text') ?? '';
-      this.insertSanitizedText(text);
+      const plainText = event.clipboardData?.getData('text/plain') || '';
+      const selection = window.getSelection();
+      const pasteLines = plainText.split('\n');
+
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        for (let line in pasteLines)
+        {
+          range.insertNode(document.createTextNode(line));
+          
+        }
+        range.collapse(false); // Collapse the range to the end of the inserted text
+      }
+      
+      this.updateLineCount();
     });
   }
 
   updateLineCount() {
-    let text = this.editor.nativeElement.innerText || '';
-
-    if (text.endsWith('\n')) {
-      const lastLineEmpty = text.split('\n').at(-1)?.trim() === '';
-      if (lastLineEmpty) {
-        text = text.replace(/\n$/, '');
-      }
-    }
-
-    const lineCount = Math.max(1, text.split('\n').length);
-    this.lines = Array.from({ length: lineCount }, (_, i) => i + 1);
+    //console.log("child element count: ", this.editor);
+    this.lines = Array.from({length: Math.max(this.editor.nativeElement.childNodes.length,1)}, (_, i) => i+1)
+    //this.lines = Array.from({ length: childDivCount, }, (_, i) => i + 1);
   }
 
-  onKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      this.insertTextAtCursor('    ');
-      return;
-    }
 
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.insertLineBreak();
-      return;
-    }
-
-    if (event.key === 'Backspace') {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-
-        // Línea vacía con ZWSP
-        if (
-          range.startContainer.nodeType === Node.TEXT_NODE &&
-          (range.startContainer.nodeValue ?? '') === this.ZWSP &&
-          range.startOffset > 0
-        ) {
-          event.preventDefault();
-          range.startContainer.nodeValue = '';
-          const br = this.findPreviousBr(range.startContainer);
-          if (br) {
-            br.remove();
-          }
-          this.updateLineCount();
-          return;
-        }
-      }
-    }
-  }
-
-  /** Inserta texto en cursor */
-  insertTextAtCursor(text: string) {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-
-    const range = sel.getRangeAt(0);
-    range.deleteContents();
-    range.insertNode(document.createTextNode(text));
-
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
-
-    this.cleanInvisibleSelection();
-    this.updateLineCount();
-  }
-
-  /** Inserta texto pegado con limpieza */
-  insertSanitizedText(text: string) {
-    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-
-    lines.forEach((line, index) => {
-      if (index > 0) {
-        this.insertLineBreak(false);
-      }
-      this.insertTextAtCursor(line || this.ZWSP);
-    });
-
-    this.cleanInvisibleSelection();
-    this.updateLineCount();
-  }
-
-  insertLineBreak(updateCounter = true) {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-
-    const range = sel.getRangeAt(0);
-
-    const br = document.createElement('br');
-    range.deleteContents();
-    range.insertNode(br);
-
-    const zwspNode = document.createTextNode(this.ZWSP);
-    br.after(zwspNode);
-
-    range.setStart(zwspNode, 1);
-    range.collapse(true);
-
-    sel.removeAllRanges();
-    sel.addRange(range);
-
-    if (updateCounter) {
-      this.cleanInvisibleSelection();
-      this.updateLineCount();
-    }
-  }
-
-  private findPreviousBr(node: Node): HTMLBRElement | null {
-    let prev = node.previousSibling;
-    while (prev) {
-      if (prev.nodeName === 'BR') {
-        return prev as HTMLBRElement;
-      }
-      prev = prev.previousSibling;
-    }
-    return null;
-  }
-
-  private placeCaretAtEnd() {
-    const el = this.editor.nativeElement;
-    const range = document.createRange();
-    const sel = window.getSelection();
-
-    range.selectNodeContents(el);
-    range.collapse(false);
-
-    sel?.removeAllRanges();
-    sel?.addRange(range);
-  }
-
-  /** Inicializa con línea vacía invisible */
-  private setEmptyLine() {
-    const span = document.createElement('span');
-    span.textContent = this.ZWSP;
-    span.style.userSelect = 'none';
-    this.editor.nativeElement.innerHTML = '';
-    this.editor.nativeElement.appendChild(span);
-    this.placeCaretAtEnd();
-  }
-
-  /** Evita que las líneas vacías se muestren como seleccionadas */
-  private cleanInvisibleSelection() {
-    const childNodes = Array.from(this.editor.nativeElement.childNodes);
-    for (const node of childNodes) {
-      if (node.nodeType === Node.TEXT_NODE && node.nodeValue === this.ZWSP) {
-        const span = document.createElement('span');
-        span.textContent = this.ZWSP;
-        span.style.userSelect = 'none';
-        node.replaceWith(span);
-      }
-    }
-  }
 }
