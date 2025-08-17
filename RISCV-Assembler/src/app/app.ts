@@ -20,7 +20,7 @@ import { assembleJTypeProgressive } from './assembler/encoders/j-type';
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App implements AfterViewInit {
+export class App {
   inputText = signal('');
   selectedOutputFormat = signal('binary');
   selectedInputFormat = signal('riscv');
@@ -30,12 +30,20 @@ export class App implements AfterViewInit {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('outputScrollContainer') outputScrollContainer!: ElementRef<HTMLDivElement>;
-
-  ngAfterViewInit() {
-    this.updateLineNumbers();
+  @ViewChild('editor') editor!: TextEditor;
+  
+  onEditorChange(content: string) {
+    this.inputText.set(content); // sincroniza con tu signal
   }
 
-  RISCV_to_binary(lines: Array<string>, format : string) {
+  outputText = computed(() => {
+    const lines = this.inputText().toLowerCase().split('\n');
+    const format = this.selectedOutputFormat();
+    return this.RISCV_to_format(lines, format);
+  });
+
+ 
+  RISCV_to_format(lines: Array<string>, format : string) {
     return lines.map(line => {
       let binary = assembleRTypeProgressive(line.trim())
         || assembleITypeProgressive(line.trim())
@@ -50,39 +58,9 @@ export class App implements AfterViewInit {
       switch (format) {
         case 'binary': return binary;
         case 'hexadecimal': return `0x${parseInt(binary, 2).toString(16).padStart(8, '0')}`;
-        case 'vhdl': return `x"${parseInt(binary, 2).toString(16).padStart(8, '0')}"`;
-        case 'verilog': return `32'b${binary}`;
         default: return line;
       }
     }).join('\n');
-  }
-
-  outputText = computed(() => {
-    const lines = this.inputText().toLowerCase().split('\n');
-    const format = this.selectedOutputFormat();
-    return this.RISCV_to_binary(lines, format);
-  });
-
-  onInput() {
-    const lines = this.inputText().split('\n').length;
-    const numbers = Array.from({ length: lines }, (_, i) => i + 1);
-    this.lineNumbers.set(numbers);
-  }
-
-  syncScroll(event: Event) {
-    const target = event.target as HTMLElement;
-    const other = this.outputScrollContainer.nativeElement;
-    if (Math.abs(target.scrollTop - other.scrollTop) > 1) {
-      other.scrollTop = target.scrollTop;
-    }
-  }
-
-  syncOutputScroll(event: Event) {
-    const target = event.target as HTMLElement;
-    const other = this.inputScrollContainer.nativeElement;
-    if (Math.abs(target.scrollTop - other.scrollTop) > 1) {
-      other.scrollTop = target.scrollTop;
-    }
   }
 
   switchFormats()
@@ -118,12 +96,12 @@ export class App implements AfterViewInit {
       {
         const lines = this.inputText().toLowerCase().split('\n');
         const format = "binary";
-        this.inputText.set(this.RISCV_to_binary(lines, format)); 
+        this.inputText.set(this.RISCV_to_format(lines, format)); 
       } else if (prev === "riscv" && current == "hexadecimal")
       {
         const lines = this.inputText().toLowerCase().split('\n');
         const format = "hexadecimal";
-        this.inputText.set(this.RISCV_to_binary(lines, format));
+        this.inputText.set(this.RISCV_to_format(lines, format));
       } else if (prev === "binary" && current == "riscv")
       {
 
@@ -153,8 +131,7 @@ export class App implements AfterViewInit {
 
     reader.onload = () => {
       const content = (reader.result as string).replace(/\r/g, '');
-      this.inputText.set(content);
-      this.updateLineNumbers();
+      this.editor.setContent(content);
     };
 
     reader.readAsText(file);
@@ -177,9 +154,5 @@ export class App implements AfterViewInit {
     saveAs(blob, `output.${extension}`);
   }
 
-  private updateLineNumbers() {
-    const lines = this.inputText().split('\n').length;
-    const numbers = Array.from({ length: lines }, (_, i) => i + 1);
-    this.lineNumbers.set(numbers);
-  }
+
 }

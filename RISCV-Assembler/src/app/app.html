@@ -31,13 +31,16 @@
   <div class="flex flex-col md:flex-row h-[calc(100%-7.5rem)] p-4 gap-4">
     <!-- INPUT SECTION -->
     <div class="flex flex-col md:w-1/2 w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono">
-      <app-text-editor></app-text-editor>
+      <app-text-editor
+        (contentChange)="onEditorChange($event)"
+        #editor>
+      </app-text-editor>
       <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
     </div>
 
     <!-- OUTPUT SECTION -->
     <div class="flex flex-col md:w-1/2 w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono">
-      <div class="flex overflow-auto w-full h-full" (scroll)="syncOutputScroll($event)" #outputScrollContainer>
+      <div class="flex overflow-auto w-full h-full">
         <!-- Line Numbers -->
         <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none w-10 leading-[1.5rem] shrink-0">
           @for (line of lineNumbers(); track line) {
