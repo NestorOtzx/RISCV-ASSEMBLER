@@ -31,6 +31,7 @@ export class TextEditor implements AfterViewInit {
       this.emitContent();
       this.highlightActiveLine();
       this.saveState();
+      this.markLineAsWrong(1);
     });
 
     editorEl.addEventListener('paste', (event: ClipboardEvent) => {
@@ -398,4 +399,26 @@ export class TextEditor implements AfterViewInit {
   private emitContent() {
     this.contentChange.emit(this.editor.nativeElement.innerText);
   }
+
+  markLineAsWrong(lineNumber: number) {
+    
+    const editorEl = this.editor.nativeElement;
+    const divs = editorEl.querySelectorAll('div');
+    
+    if (lineNumber < 1 || lineNumber > divs.length) return; // fuera de rango
+    
+    const targetDiv = divs[lineNumber - 1] as HTMLDivElement;
+    targetDiv.classList.add('wrong-line');
+  }
+
+  clearWrongMark(lineNumber: number) {
+    const editorEl = this.editor.nativeElement;
+    const divs = editorEl.querySelectorAll('div');
+
+    if (lineNumber < 1 || lineNumber > divs.length) return; // fuera de rango
+
+    const targetDiv = divs[lineNumber - 1] as HTMLDivElement;
+    targetDiv.classList.remove('wrong-line');
+  }
+
 }

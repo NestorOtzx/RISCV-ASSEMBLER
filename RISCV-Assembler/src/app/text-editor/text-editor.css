@@ -18,3 +18,8 @@
   background-color: #1F2937; /* bg-gray-900 */
   padding: 0 8px 0 8px;
 }
+
+:host ::ng-deep .wrong-line {
+  text-decoration: red wavy underline;
+  text-decoration-thickness: 2px;
+}

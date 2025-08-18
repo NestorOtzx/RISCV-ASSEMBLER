@@ -64,7 +64,9 @@ export class App {
 
  
   RISCV_to_format(lines: Array<string>, format : string) {
-    return lines.map(line => {
+    return lines.map((line, i) => {
+      console.log("line i: ", i, ": ", line);
+
       let binary = assembleRTypeProgressive(line.trim())
         || assembleITypeProgressive(line.trim())
         || assembleSTypeProgressive(line.trim())
@@ -73,7 +75,14 @@ export class App {
         || assembleUTypeProgressive(line.trim())
         || assembleJTypeProgressive(line.trim());
 
-      if (!binary) return line;
+      if (!binary) {
+        if (line.length > 2){
+          this.editor.markLineAsWrong(i+1);
+        }
+        return line;
+      }else{
+        this.editor.clearWrongMark(i+1);
+      }
 
       switch (format) {
         case 'binary': return binary;
@@ -82,6 +91,8 @@ export class App {
       }
     }).join('\n');
   }
+
+
 
   switchFormats()
   {
