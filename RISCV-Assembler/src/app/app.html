@@ -30,22 +30,82 @@
   <!-- INPUT + OUTPUT -->
   <div class="flex flex-col md:flex-row h-[calc(100%-7.5rem)] p-4 gap-4">
     <!-- INPUT SECTION -->
-    <div class="flex flex-col md:w-1/2 w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono">
+    <div class="flex flex-col md:w-1/2 w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono relative">
+      <!-- Toolbar flotante -->
+      <div class="absolute top-2 right-2 flex items-center gap-1 bg-transparent rounded">
+        <button (click)="undo()" 
+          class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
+                bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60" 
+          title="Undo">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+          </svg>
+        </button>
+
+        <!-- Redo -->
+        <button (click)="redo()" 
+          class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
+                bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60" 
+          title="Redo">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+          </svg>
+        </button>
+
+        <!-- Copy -->
+        <button (click)="copyContent()" 
+          class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
+                bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60" 
+          title="Copy">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" 
+              viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/>
+          </svg>
+        </button>
+
+        <!-- Paste -->
+        <button (click)="pasteContent()" 
+          class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
+                bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60" 
+          title="Paste">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" 
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- documento -->
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <!-- flecha hacia abajo -->
+          </svg>
+        </button>
+
+
+        <!-- Clear -->
+        <button (click)="clearContent()" 
+          class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
+                bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60" 
+          title="Clear all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+
+      </div>
+
+      <!-- Editor -->
       <app-text-editor
         (contentChange)="onEditorChange($event)"
         #editor>
       </app-text-editor>
+
       <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
     </div>
+
 
     <!-- OUTPUT SECTION -->
     <div class="flex flex-col md:w-1/2 w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono">
       <div class="flex overflow-auto w-full h-full">
         <!-- Line Numbers -->
         <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none w-10 leading-[1.5rem] shrink-0">
-          @for (line of lineNumbers(); track line) {
-            <div class="bg-gray-900 pr-2">{{ line }}</div>
-          }
+            <div class="bg-gray-900 pr-2">{{ 1 }}</div>
         </div>
         <!-- Output Preformatted Text -->
         <pre class="flex-1 text-white pt-2 pl-2 whitespace-pre-wrap font-mono leading-[1.5rem]">{{outputText()}}</pre>

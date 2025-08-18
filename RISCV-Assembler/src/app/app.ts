@@ -25,8 +25,6 @@ export class App {
   selectedOutputFormat = signal('binary');
   selectedInputFormat = signal('riscv');
 
-  lineNumbers = signal<number[]>([1]);
-
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('outputScrollContainer') outputScrollContainer!: ElementRef<HTMLDivElement>;
@@ -41,6 +39,28 @@ export class App {
     const format = this.selectedOutputFormat();
     return this.RISCV_to_format(lines, format);
   });
+
+  clearContent()
+  {
+    this.editor.delete();
+  }
+
+  pasteContent(){
+    this.editor.paste();
+  }
+
+  copyContent()
+  {
+    this.editor.copy();
+  }
+
+  redo(){
+    this.editor.redo();
+  }
+
+  undo(){
+    this.editor.undo();
+  }
 
  
   RISCV_to_format(lines: Array<string>, format : string) {
