@@ -1,3 +1,17 @@
+<div class="absolute top-2 right-2 flex items-center gap-1 bg-transparent rounded">
+  <!-- Copy -->
+  <button (click)="copy()" 
+    class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
+          bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60" 
+    title="Copy">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" 
+        viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"/>
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/>
+    </svg>
+  </button>
+</div>
+
 <div class="flex overflow-auto w-full h-full">
   <!-- Line Numbers -->
   <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none w-10 leading-[1.5rem] shrink-0">

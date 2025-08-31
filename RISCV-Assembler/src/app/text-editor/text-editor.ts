@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter, Input } from '@angular/core';
 
 @Component({
   selector: 'app-text-editor',
@@ -12,7 +12,7 @@ export class TextEditor implements AfterViewInit {
 
   constructor(private elementRef: ElementRef) {}
 
-  lines: number[] = [1];
+  @Input() lines: string[] = ['1'];
 
   private undoStack: string[] = [];
   private redoStack: string[] = [];
@@ -22,7 +22,6 @@ export class TextEditor implements AfterViewInit {
 
   ngAfterViewInit() {
     this.ensureFirstLineWrapped();
-    this.updateLineCount();
     this.saveState(); 
 
     const editorEl = this.editor.nativeElement;
@@ -36,7 +35,6 @@ export class TextEditor implements AfterViewInit {
 
     editorEl.addEventListener('input', () => {
       this.ensureFirstLineWrapped();
-      this.updateLineCount();
       this.emitContent();
       this.highlightActiveLine();
       this.saveState();
@@ -103,7 +101,6 @@ export class TextEditor implements AfterViewInit {
         selection.addRange(newRange);
       }
 
-      this.updateLineCount();
       this.emitContent();
       this.highlightActiveLine();
       this.saveState();
@@ -155,7 +152,6 @@ export class TextEditor implements AfterViewInit {
   private restoreContent(html: string) {
     this.editor.nativeElement.innerHTML = html;
     this.ensureFirstLineWrapped();
-    this.updateLineCount();
     this.emitContent();
     this.placeCaretAtEnd(this.editor.nativeElement);
     this.highlightActiveLine();
@@ -255,7 +251,6 @@ export class TextEditor implements AfterViewInit {
       }
     });
 
-    this.updateLineCount();
     this.emitContent();
     this.highlightActiveLine();
   }
@@ -263,7 +258,6 @@ export class TextEditor implements AfterViewInit {
   delete() {
     const editorEl = this.editor.nativeElement;
     editorEl.innerHTML = '<div><br></div>';
-    this.updateLineCount();
     this.emitContent();
     this.saveState();
     this.placeCaretAtEnd(editorEl);
@@ -298,7 +292,6 @@ export class TextEditor implements AfterViewInit {
       editorEl.appendChild(div);
     });
 
-    this.updateLineCount();
     this.emitContent();
     this.saveState(); 
     this.placeCaretAtEnd(editorEl);
@@ -396,12 +389,9 @@ export class TextEditor implements AfterViewInit {
     return null;
   }
 
-  updateLineCount() {
-    this.lines = Array.from(
-      { length: Math.max(this.editor.nativeElement.childNodes.length, 1) },
-      (_, i) => i + 1
-    );
-  }
+  
+
+
 
   private emitContent() {
     const lines: string[] = [];

@@ -41,6 +41,40 @@ export class App {
     const format = this.selectedOutputFormat();
     return this.RISCV_to_format(lines, format);
   });
+
+  lines = computed(() => {
+    const content = this.inputText();
+    const rawLines = content.split("\n");
+
+    let lineNumber = 1;
+    const result: string[] = [];
+
+    for (const raw of rawLines) {
+      const clean = raw.trim();
+
+      const binary = assembleRTypeProgressive(clean)
+      || assembleITypeProgressive(clean)
+      || assembleSTypeProgressive(clean)
+      || assembleBTypeProgressive(clean)
+      || assembleSpecialITypeProgressive(clean)
+      || assembleUTypeProgressive(clean)
+      || assembleJTypeProgressive(clean);
+
+      if (clean.length > 0 && binary) {
+        result.push((lineNumber++).toString());
+      } else {
+        result.push("\u00A0");
+      }
+    }
+
+    // si no hay ninguna línea válida, mostramos al menos una
+    if (result.length === 0) {
+      return ["1"];
+    }
+
+    return result;
+  });
+
  
   RISCV_to_format(lines: Array<string>, format : string) {
     return lines.map((line, i) => {
@@ -64,9 +98,6 @@ export class App {
       }else{
         this.editor.clearWrongMark(i+1);
       }
-
-      
-
 
       switch (format) {
         case 'binary': return binary;
@@ -150,12 +181,6 @@ export class App {
     };
 
     reader.readAsText(file);
-  }
-
-  copyOutput() {
-    navigator.clipboard.writeText(this.outputText()).then(() => {
-      alert('Output copied to clipboard!');
-    });
   }
 
   downloadOutput() {
