@@ -141,6 +141,8 @@ export class TextEditor implements AfterViewInit {
     });
   }
 
+  
+
   private saveState() {
     const html = this.editor.nativeElement.innerHTML;
     const last = this.undoStack[this.undoStack.length - 1];

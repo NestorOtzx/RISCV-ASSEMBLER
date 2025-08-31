@@ -12,11 +12,12 @@ import { assembleBTypeProgressive } from './assembler/encoders/b-type';
 import { assembleSpecialITypeProgressive } from './assembler/encoders/special-i-type';
 import { assembleUTypeProgressive } from './assembler/encoders/u-type';
 import { assembleJTypeProgressive } from './assembler/encoders/j-type';
+import { OutputText } from './output-text/output-text';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, FormsModule, TextEditor],
+  imports: [RouterOutlet, FormsModule, TextEditor, OutputText],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -40,29 +41,6 @@ export class App {
     const format = this.selectedOutputFormat();
     return this.RISCV_to_format(lines, format);
   });
-
-  clearContent()
-  {
-    this.editor.delete();
-  }
-
-  pasteContent(){
-    this.editor.paste();
-  }
-
-  copyContent()
-  {
-    this.editor.copy();
-  }
-
-  redo(){
-    this.editor.redo();
-  }
-
-  undo(){
-    this.editor.undo();
-  }
-
  
   RISCV_to_format(lines: Array<string>, format : string) {
     return lines.map((line, i) => {
