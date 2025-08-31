@@ -36,6 +36,10 @@ export class App {
     this.inputText.set(content); // sincroniza con tu signal
   }
 
+  onLabelsChange(labels: { name: string, line: number }[]) {
+    console.log("Etiquetas detectadas:", labels);
+  }
+
   outputText = computed(() => {
     const lines = this.inputText().toLowerCase().split('\n');
     const format = this.selectedOutputFormat();
@@ -78,27 +82,39 @@ export class App {
  
   RISCV_to_format(lines: Array<string>, format : string) {
     return lines.map((line, i) => {
+      const trimmed = line.trim();
 
-      let binary = assembleRTypeProgressive(line.trim())
-        || assembleITypeProgressive(line.trim())
-        || assembleSTypeProgressive(line.trim())
-        || assembleBTypeProgressive(line.trim())
-        || assembleSpecialITypeProgressive(line.trim())
-        || assembleUTypeProgressive(line.trim())
-        || assembleJTypeProgressive(line.trim());
-      
-      console.log("line i: ", i+1, ": ", line," binary?", binary);
+      // 🔹 Detectar etiquetas (terminan en ':' y no tienen espacios intermedios)
+      const isLabel = /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
+
+      if (isLabel) {
+        this.editor.clearWrongMark(i + 1);
+        return trimmed; // las dejamos igual
+      }
+
+      // 🔹 Probar ensambladores
+      let binary = assembleRTypeProgressive(trimmed)
+        || assembleITypeProgressive(trimmed)
+        || assembleSTypeProgressive(trimmed)
+        || assembleBTypeProgressive(trimmed)
+        || assembleSpecialITypeProgressive(trimmed)
+        || assembleUTypeProgressive(trimmed)
+        || assembleJTypeProgressive(trimmed);
+
+      console.log("line i: ", i+1, ": ", line, " binary?", binary);
+
       if (!binary) {
-        if (line.length > 2){
+        if (trimmed.length > 2) {
           this.editor.markLineAsWrong(i+1, "This instruction doesn't exist.");
-        }else if (line.length > 0){
+        } else if (trimmed.length > 0) {
           this.editor.clearWrongMark(i+1);  
         }
         return line;
-      }else{
+      } else {
         this.editor.clearWrongMark(i+1);
       }
 
+      // 🔹 Formato de salida
       switch (format) {
         case 'binary': return binary;
         case 'hexadecimal': return `0x${parseInt(binary, 2).toString(16).padStart(8, '0')}`;
@@ -106,6 +122,7 @@ export class App {
       }
     }).join('\n');
   }
+
 
 
 

@@ -9,7 +9,8 @@ import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter, 
 export class TextEditor implements AfterViewInit {
   @ViewChild('editor', { static: true }) editor!: ElementRef<HTMLDivElement>;
   @Output() contentChange = new EventEmitter<string>();
-
+  @Output() labelsChange = new EventEmitter<{ name: string, line: number }[]>();
+  
   constructor(private elementRef: ElementRef) {}
 
   @Input() lines: string[] = ['1'];
@@ -106,7 +107,8 @@ export class TextEditor implements AfterViewInit {
       this.saveState();
     });
 
-    editorEl.addEventListener('keydown', (event: KeyboardEvent) => {
+    /*
+      editorEl.addEventListener('keydown', (event: KeyboardEvent) => {
       const isMac = navigator.platform.toLowerCase().includes('mac');
       const mod = isMac ? event.metaKey : event.ctrlKey;
 
@@ -126,6 +128,39 @@ export class TextEditor implements AfterViewInit {
         this.saveState();
       }
     });
+    */
+
+    editorEl.addEventListener('keydown', (event: KeyboardEvent) => {
+    const isMac = navigator.platform.toLowerCase().includes('mac');
+    const mod = isMac ? event.metaKey : event.ctrlKey;
+
+    if (mod && !event.shiftKey && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      this.undo();
+      return;
+    }
+    if ((mod && event.key.toLowerCase() === 'y') || (mod && event.shiftKey && event.key.toLowerCase() === 'z')) {
+      event.preventDefault();
+      this.redo();
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      this.insertTextAtCursor('\t'); 
+      this.saveState();
+      return;
+    }
+
+    // 🔹 Aquí capturamos el Enter
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.handleNewLineIndent();
+      this.saveState();
+      return;
+    }
+  });
+
 
     editorEl.addEventListener('keyup', () => this.highlightActiveLine());
     editorEl.addEventListener('mouseup', () => this.highlightActiveLine());
@@ -138,7 +173,54 @@ export class TextEditor implements AfterViewInit {
     });
   }
 
-  
+  private handleNewLineIndent() {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    const range = sel.getRangeAt(0);
+    const currentDiv = this.getClosestDiv(range.startContainer);
+    if (!currentDiv) return;
+
+    const beforeText = currentDiv.textContent?.slice(0, range.startOffset) || '';
+    const afterText = currentDiv.textContent?.slice(range.startOffset) || '';
+    
+    // 🔹 Tomamos la indentación de la línea actual
+    const indentMatch = beforeText.match(/^\t+/);
+    let baseIndent = indentMatch ? indentMatch[0] : "";
+
+    // 🔹 Detectamos si la línea actual es una etiqueta (termina en ":")
+    const isLabel = beforeText.trim().endsWith(":");
+    if (isLabel) {
+      baseIndent += "\t"; // agregamos un tab extra
+    }
+
+    // 🔹 Creamos el nuevo div (nueva línea)
+    const newDiv = document.createElement("div");
+    newDiv.textContent = baseIndent + afterText;
+
+    // 🔹 Ajustamos la línea actual
+    currentDiv.textContent = beforeText;
+
+    // 🔹 Insertamos debajo
+    const parent = currentDiv.parentNode!;
+    parent.insertBefore(newDiv, currentDiv.nextSibling);
+
+    // 🔹 Movemos el cursor al final de la indentación
+    const newRange = document.createRange();
+    if (newDiv.firstChild && newDiv.firstChild.nodeType === Node.TEXT_NODE) {
+      newRange.setStart(newDiv.firstChild, baseIndent.length);
+    } else {
+      newRange.setStart(newDiv, 0);
+    }
+    newRange.collapse(true);
+
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+
+    this.emitContent();
+    this.highlightActiveLine();
+  }
+
 
   private saveState() {
     const html = this.editor.nativeElement.innerHTML;
@@ -412,8 +494,22 @@ export class TextEditor implements AfterViewInit {
       }
     }
 
-    // 🔹 Aquí recién agregamos los saltos de línea entre cada línea limpia
-    this.contentChange.emit(lines.join("\n"));
+    const cleanText = lines.join("\n");
+    this.contentChange.emit(cleanText);
+
+    // 🔹 Detectamos etiquetas (ejemplo: "main:", "loop:", etc.)
+    const labels: { name: string, line: number }[] = [];
+    lines.forEach((line, i) => {
+      const match = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*):$/); 
+      if (match) {
+        labels.push({
+          name: match[1],    // nombre sin el `:`
+          line: i + 1        // línea 1-indexada
+        });
+      }
+    });
+
+    this.labelsChange.emit(labels);
   }
 
 
