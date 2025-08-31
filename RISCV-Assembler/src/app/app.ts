@@ -31,6 +31,7 @@ export class App {
   @ViewChild('editor') editor!: TextEditor;
   
   onEditorChange(content: string) {
+    console.log("editor change: ", content);
     this.inputText.set(content); // sincroniza con tu signal
   }
 
@@ -65,7 +66,6 @@ export class App {
  
   RISCV_to_format(lines: Array<string>, format : string) {
     return lines.map((line, i) => {
-      console.log("line i: ", i, ": ", line);
 
       let binary = assembleRTypeProgressive(line.trim())
         || assembleITypeProgressive(line.trim())
@@ -74,15 +74,21 @@ export class App {
         || assembleSpecialITypeProgressive(line.trim())
         || assembleUTypeProgressive(line.trim())
         || assembleJTypeProgressive(line.trim());
-
+      
+      console.log("line i: ", i+1, ": ", line," binary?", binary);
       if (!binary) {
         if (line.length > 2){
-          this.editor.markLineAsWrong(i+1);
+          this.editor.markLineAsWrong(i+1, "This instruction doesn't exist.");
+        }else if (line.length > 0){
+          this.editor.clearWrongMark(i+1);  
         }
         return line;
       }else{
         this.editor.clearWrongMark(i+1);
       }
+
+      
+
 
       switch (format) {
         case 'binary': return binary;

@@ -23,3 +23,18 @@
   text-decoration: red wavy underline;
   text-decoration-thickness: 2px;
 }
+
+::ng-deep .tooltip {
+  position: fixed;
+  display: none;
+  background-color: #252526;   /* fondo oscuro estilo VS */
+  color: #dcdcdc;              /* texto claro */
+  padding: 6px 10px;           /* espacio interno */
+  border: 1px solid #454545;   /* borde gris oscuro */
+  font-size: 12px;             /* tamaño pequeño como en VS */
+  font-family: Consolas, monospace; /* tipografía estilo código */
+  max-width: 400px;            /* ancho máximo */
+  white-space: pre-wrap;       /* respetar saltos de línea */
+  pointer-events: none;        /* que no bloquee el mouse */
+  z-index: 9999;               /* encima de todo */
+}

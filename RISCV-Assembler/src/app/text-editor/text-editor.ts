@@ -18,12 +18,21 @@ export class TextEditor implements AfterViewInit {
   private redoStack: string[] = [];
   private readonly MAX_HISTORY = 200;
 
+  private tooltipEl!: HTMLDivElement;
+
   ngAfterViewInit() {
     this.ensureFirstLineWrapped();
     this.updateLineCount();
     this.saveState(); 
 
     const editorEl = this.editor.nativeElement;
+
+    this.tooltipEl = document.createElement('div');
+    this.tooltipEl.classList.add('tooltip');
+    document.body.appendChild(this.tooltipEl);
+
+    editorEl.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+    editorEl.addEventListener('mouseleave', () => this.hideTooltip());
 
     editorEl.addEventListener('input', () => {
       this.ensureFirstLineWrapped();
@@ -276,10 +285,6 @@ export class TextEditor implements AfterViewInit {
     }
   }
 
-  getContent(): string {
-    return this.editor.nativeElement.innerText;
-  }
-
   setContent(text: string) {
     const editorEl = this.editor.nativeElement;
     editorEl.innerHTML = ''; 
@@ -397,28 +402,72 @@ export class TextEditor implements AfterViewInit {
   }
 
   private emitContent() {
-    this.contentChange.emit(this.editor.nativeElement.innerText);
+    const lines: string[] = [];
+
+    for (const child of Array.from(this.editor.nativeElement.children)) {
+      if ((child as HTMLElement).tagName.toLowerCase() === "div") {
+        let text = (child as HTMLElement).innerText;
+
+        // 🔹 Limpieza completa de caracteres especiales
+        text = text
+          .replace(/\u00A0/g, " ")   // no-breaking space → espacio normal
+          .replace(/\u200B/g, "")    // zero width space → nada
+          .replace(/\u2028|\u2029/g, "") // separadores de línea/parrafo → eliminados
+          .replace(/\r\n|\r|\n/g, "") // quitar cualquier salto interno
+          .trim();                   // quitar espacios extra al inicio/fin
+
+        lines.push(text);
+      }
+    }
+
+    // 🔹 Aquí recién agregamos los saltos de línea entre cada línea limpia
+    this.contentChange.emit(lines.join("\n"));
   }
 
-  markLineAsWrong(lineNumber: number) {
-    
+
+  // === Tooltip handlers ===
+  handleMouseMove(e: MouseEvent) {
+    const target = e.target as HTMLElement | null;
+    if (target && target.classList.contains('wrong-line') && target.dataset['error']) {
+      this.tooltipEl.textContent = target.dataset['error'];
+      this.tooltipEl.style.display = 'block';
+      this.tooltipEl.style.left = `${e.clientX + 12}px`;
+      this.tooltipEl.style.top = `${e.clientY + 12}px`;
+    } else {
+      this.hideTooltip();
+    }
+  }
+
+
+  private hideTooltip() {
+    this.tooltipEl.style.display = 'none';
+  }
+
+  // === Cambiado: mark/clear error ===
+  markLineAsWrong(lineNumber: number, errorMessage?: string) {
     const editorEl = this.editor.nativeElement;
     const divs = editorEl.querySelectorAll('div');
     
-    if (lineNumber < 1 || lineNumber > divs.length) return; // fuera de rango
-    
+    if (lineNumber < 1 || lineNumber > divs.length) return;
+
     const targetDiv = divs[lineNumber - 1] as HTMLDivElement;
     targetDiv.classList.add('wrong-line');
+
+    if (errorMessage) {
+      targetDiv.dataset['error'] = errorMessage; // ✅ acceso seguro en TS
+    }
   }
 
   clearWrongMark(lineNumber: number) {
     const editorEl = this.editor.nativeElement;
     const divs = editorEl.querySelectorAll('div');
 
-    if (lineNumber < 1 || lineNumber > divs.length) return; // fuera de rango
+    if (lineNumber < 1 || lineNumber > divs.length) return;
 
     const targetDiv = divs[lineNumber - 1] as HTMLDivElement;
     targetDiv.classList.remove('wrong-line');
+    delete targetDiv.dataset['error']; // ✅ borrado con ['error']
   }
+
 
 }
