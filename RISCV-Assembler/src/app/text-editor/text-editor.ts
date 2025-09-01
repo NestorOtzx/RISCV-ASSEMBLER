@@ -107,8 +107,8 @@ export class TextEditor implements AfterViewInit {
       this.saveState();
     });
 
-    /*
-      editorEl.addEventListener('keydown', (event: KeyboardEvent) => {
+
+    editorEl.addEventListener('keydown', (event: KeyboardEvent) => {
       const isMac = navigator.platform.toLowerCase().includes('mac');
       const mod = isMac ? event.metaKey : event.ctrlKey;
 
@@ -122,44 +122,22 @@ export class TextEditor implements AfterViewInit {
         this.redo();
         return;
       }
+
       if (event.key === 'Tab') {
         event.preventDefault();
-        this.insertTextAtCursor('\t'); 
+        this.insertTextAtCursor('\t');
         this.saveState();
+        return;
+      }
+
+      // Capturamos Enter y hacemos la indentación personalizada
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        this.handleNewLineIndent();
+        this.saveState();
+        return;
       }
     });
-    */
-
-    editorEl.addEventListener('keydown', (event: KeyboardEvent) => {
-    const isMac = navigator.platform.toLowerCase().includes('mac');
-    const mod = isMac ? event.metaKey : event.ctrlKey;
-
-    if (mod && !event.shiftKey && event.key.toLowerCase() === 'z') {
-      event.preventDefault();
-      this.undo();
-      return;
-    }
-    if ((mod && event.key.toLowerCase() === 'y') || (mod && event.shiftKey && event.key.toLowerCase() === 'z')) {
-      event.preventDefault();
-      this.redo();
-      return;
-    }
-
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      this.insertTextAtCursor('\t'); 
-      this.saveState();
-      return;
-    }
-
-    // 🔹 Aquí capturamos el Enter
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.handleNewLineIndent();
-      this.saveState();
-      return;
-    }
-  });
 
 
     editorEl.addEventListener('keyup', () => this.highlightActiveLine());
@@ -173,6 +151,20 @@ export class TextEditor implements AfterViewInit {
     });
   }
 
+  private getCaretOffsetInDiv(div: HTMLDivElement): number {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return 0;
+    const range = sel.getRangeAt(0);
+
+    // Creamos un rango que selecciona desde el inicio del div hasta la posición actual
+    const preRange = range.cloneRange();
+    preRange.selectNodeContents(div);
+    preRange.setEnd(range.endContainer, range.endOffset);
+
+    // preRange.toString() devuelve el texto antes del caret dentro del div
+    return preRange.toString().length;
+  }
+
   private handleNewLineIndent() {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -181,41 +173,67 @@ export class TextEditor implements AfterViewInit {
     const currentDiv = this.getClosestDiv(range.startContainer);
     if (!currentDiv) return;
 
-    const beforeText = currentDiv.textContent?.slice(0, range.startOffset) || '';
-    const afterText = currentDiv.textContent?.slice(range.startOffset) || '';
-    
-    // 🔹 Tomamos la indentación de la línea actual
-    const indentMatch = beforeText.match(/^\t+/);
-    let baseIndent = indentMatch ? indentMatch[0] : "";
+    // Texto completo de la línea actual (antes de cualquier cambio)
+    const fullText = (currentDiv.textContent ?? '');
 
-    // 🔹 Detectamos si la línea actual es una etiqueta (termina en ":")
-    const isLabel = beforeText.trim().endsWith(":");
-    if (isLabel) {
-      baseIndent += "\t"; // agregamos un tab extra
+    // Offset del caret relativo al inicio de la línea
+    const caretOffset = this.getCaretOffsetInDiv(currentDiv);
+
+    // Partimos la línea donde está el caret
+    const beforeText = fullText.slice(0, caretOffset);
+    const afterText = fullText.slice(caretOffset);
+
+    // Tomamos la indentación (tabs) del inicio de la línea completa
+    const indentMatch = fullText.match(/^\t+/);
+    let baseIndent = indentMatch ? indentMatch[0] : '';
+
+    // Si la línea completa es una etiqueta (ej: "main:") añadimos un tab extra
+    const isLabelLine = fullText.trim().endsWith(':') && /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(fullText.trim());
+    if (isLabelLine) baseIndent += '\t';
+
+    // Ajustamos la línea actual (lo que queda antes del caret)
+    if (beforeText === '') {
+      // si queda vacía la línea actual, dejamos un <br> para que sea seleccionable
+      currentDiv.innerHTML = '<br>';
+    } else {
+      currentDiv.textContent = beforeText;
     }
 
-    // 🔹 Creamos el nuevo div (nueva línea)
-    const newDiv = document.createElement("div");
-    newDiv.textContent = baseIndent + afterText;
+    // Creamos el nuevo div con la indentación y el texto que venía después del caret
+    const newDiv = document.createElement('div');
+    const newContent = baseIndent + afterText;
 
-    // 🔹 Ajustamos la línea actual
-    currentDiv.textContent = beforeText;
+    if (newContent === '') {
+      newDiv.innerHTML = '<br>';
+    } else {
+      newDiv.textContent = newContent;
+    }
 
-    // 🔹 Insertamos debajo
+    // Insertamos debajo de la línea actual
     const parent = currentDiv.parentNode!;
     parent.insertBefore(newDiv, currentDiv.nextSibling);
 
-    // 🔹 Movemos el cursor al final de la indentación
+    // Colocamos el caret al final de la indentación de la nueva línea
     const newRange = document.createRange();
-    if (newDiv.firstChild && newDiv.firstChild.nodeType === Node.TEXT_NODE) {
-      newRange.setStart(newDiv.firstChild, baseIndent.length);
+    const firstChild = newDiv.firstChild;
+
+    if (firstChild && firstChild.nodeType === Node.TEXT_NODE) {
+      // Posicionamos dentro del text node en el offset igual al número de tabs
+      newRange.setStart(firstChild, baseIndent.length);
     } else {
+      // Si es <br> u otro, posicionamos al inicio del nuevoDiv
       newRange.setStart(newDiv, 0);
     }
     newRange.collapse(true);
 
     sel.removeAllRanges();
     sel.addRange(newRange);
+
+    // Aseguramos que la nueva línea quede visible y actualizamos estado
+    if ((newDiv as HTMLElement).scrollIntoView) {
+      // centra ligeramente para visibilidad
+      try { newDiv.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* ignore */ }
+    }
 
     this.emitContent();
     this.highlightActiveLine();
