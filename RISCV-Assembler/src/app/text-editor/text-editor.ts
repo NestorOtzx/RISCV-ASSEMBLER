@@ -4,6 +4,9 @@ import { extractContentAndLabels } from './utils/content-utils';
 import { handleNewLineIndent } from './utils/indent-utils';
 import { HistoryManager } from './utils/history-manager';
 import { TooltipManager } from './utils/tooltip-manager';
+import { copy, handlePaste, deleteAll, undo, redo } from './utils/editor-actions';
+
+
 
 @Component({
   selector: 'app-text-editor',
@@ -29,10 +32,9 @@ export class TextEditor implements AfterViewInit {
 
     this.tooltip = new TooltipManager();
 
-    editorEl.addEventListener('paste', (event: ClipboardEvent) => {
+    editorEl.addEventListener('paste', async (event: ClipboardEvent) => {
       event.preventDefault();
-      const plainText = event.clipboardData?.getData('text/plain') || '';
-      this.handlePaste(plainText);
+      await this.paste();
     });
 
 
@@ -106,96 +108,44 @@ export class TextEditor implements AfterViewInit {
     });
   }
 
-  private handlePaste(text: string) {
-  const editorEl = this.editor.nativeElement;
-  const prevHTML = editorEl.innerHTML;
-
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-
-  const range = selection.getRangeAt(0);
-
-  // 🔹 Asegurar que se elimina la selección completa (divs enteros incluidos)
-  let startDiv = getClosestDiv(range.startContainer, editorEl);
-  let endDiv = getClosestDiv(range.endContainer, editorEl);
-
-  if (!startDiv) {
-    startDiv = document.createElement('div');
-    startDiv.innerHTML = '<br>';
-    editorEl.appendChild(startDiv);
+  async copy() {
+    await copy(this.editor.nativeElement);
   }
 
-  if (!endDiv) endDiv = startDiv;
-
-  const afterText = endDiv.textContent?.slice(range.endOffset) || '';
-  const beforeText = startDiv.textContent?.slice(0, range.startOffset) || '';
-
-  // 🔹 Eliminar todos los divs que están completamente seleccionados
-  const divs = Array.from(editorEl.querySelectorAll('div'));
-  const startIndex = divs.indexOf(startDiv);
-  const endIndex = divs.indexOf(endDiv);
-
-  for (let i = startIndex; i <= endIndex; i++) {
-    editorEl.removeChild(divs[i]);
-  }
-
-  // 🔹 Crear un nuevo div "limpio" donde insertar el pegado
-  let currentDiv = document.createElement('div');
-  editorEl.insertBefore(currentDiv, divs[endIndex + 1] || null);
-
-  const pasteLines = text.split(/\r?\n/);
-
-  // Primera línea = beforeText + primera línea pegada
-  const firstLine = beforeText + (pasteLines[0] ?? '');
-  currentDiv.textContent = firstLine === '' ? '' : firstLine;
-
-  let lastInserted = currentDiv;
-
-  // Insertar las siguientes líneas
-  for (let i = 1; i < pasteLines.length; i++) {
-    const newDiv = document.createElement('div');
-    newDiv.textContent = pasteLines[i] ?? '';
-    editorEl.insertBefore(newDiv, lastInserted.nextSibling);
-    lastInserted = newDiv;
-  }
-
-  // Agregar el afterText al último div
-  if (afterText) {
-    lastInserted.textContent = (lastInserted.textContent || '') + afterText;
-  }
-
-  // Restaurar caret al final de lo pegado
-  const newRange = document.createRange();
-  const firstChild = lastInserted.firstChild;
-  if (firstChild && firstChild.nodeType === Node.TEXT_NODE) {
-    newRange.setStart(firstChild, (firstChild as Text).length);
-  } else {
-    newRange.setStart(lastInserted, lastInserted.childNodes.length);
-  }
-  newRange.collapse(true);
-  selection.removeAllRanges();
-  selection.addRange(newRange);
-
-  fixEmptyDivs(editorEl);
-  ensureFirstLineWrapped(editorEl);
-
-  // 🔹 Emitir solo si cambió realmente
-  if (editorEl.innerHTML !== prevHTML) {
-    const { text: cleaned, labels } = extractContentAndLabels(editorEl);
-    this.contentChange.emit(cleaned);
-    this.labelsChange.emit(labels);
-    this.history.push(editorEl.innerHTML);
-    this.highlightActiveLine();
-  }
-}
-
-
-
-
-  // botón paste()
   async paste() {
     const text = await navigator.clipboard.readText();
-    if (text) this.handlePaste(text);
+    if (text) {
+      handlePaste(
+        this.editor.nativeElement,
+        text,
+        this.history,
+        (t, labels) => {
+          this.contentChange.emit(t);
+          this.labelsChange.emit(labels);
+        },
+        () => this.highlightActiveLine()
+      );
+    }
+  }
+
+  delete() {
+    deleteAll(
+      this.editor.nativeElement,
+      this.history,
+      (t, labels) => {
+        this.contentChange.emit(t);
+        this.labelsChange.emit(labels);
+      },
+      () => this.highlightActiveLine()
+    );
+  }
+
+  undo() {
+    undo(this.history, (html) => this.restoreContent(html));
+  }
+
+  redo() {
+    redo(this.history, (html) => this.restoreContent(html));
   }
 
 
@@ -208,27 +158,6 @@ export class TextEditor implements AfterViewInit {
     this.labelsChange.emit(labels);
     placeCaretAtEnd(this.editor.nativeElement);
     this.highlightActiveLine();
-  }
-
-  async copy() {
-    const editorEl = this.editor.nativeElement;
-
-    if (!editorEl) return;
-
-    const lines: string[] = [];
-    editorEl.querySelectorAll('div').forEach(div => {
-      if (div.textContent === '' || div.innerHTML === '<br>') {
-        lines.push(''); 
-      } else {
-        lines.push(div.textContent || '');
-      }
-    });
-
-    const plainText = lines.join('\n');
-
-    if (plainText.trim() !== '' || lines.length > 0) {
-      await navigator.clipboard.writeText(plainText);
-    }
   }
 
 
@@ -245,30 +174,6 @@ export class TextEditor implements AfterViewInit {
     sel.addRange(range);
   }
 
-  delete() {
-    const editorEl = this.editor.nativeElement;
-
-    // 🔹 dejamos solo un <div><br></div> para que nunca esté vacío del todo
-    editorEl.innerHTML = '<div><br></div>';
-
-    const { text, labels } = extractContentAndLabels(editorEl);
-    this.contentChange.emit(text);
-    this.labelsChange.emit(labels);
-
-    this.history.push(editorEl.innerHTML);
-    placeCaretAtEnd(editorEl);
-    this.highlightActiveLine();
-  }
-
-  redo() {
-    const next = this.history.redo();
-    if (next !== undefined) this.restoreContent(next);
-  }
-
-  undo() {
-    const prev = this.history.undo();
-    if (prev !== undefined) this.restoreContent(prev);
-  }
 
   // aplica clases active/unactive
   private highlightActiveLine() {
