@@ -1,3 +1,28 @@
+import { 
+  rInstructions, 
+  iInstructions, 
+  sInstructions, 
+  bInstructions, 
+  jInstructions, 
+  uInstructions, 
+  specialIInstructions 
+} from "../../assembler/instruction-tables";
+
+const allInstructions: Record<string, string> = {};
+
+function loadInstructions() {
+  Object.keys(rInstructions).forEach(k => allInstructions[k] = "r");
+  Object.keys(iInstructions).forEach(k => allInstructions[k] = "i");
+  Object.keys(sInstructions).forEach(k => allInstructions[k] = "s");
+  Object.keys(bInstructions).forEach(k => allInstructions[k] = "b");
+  Object.keys(jInstructions).forEach(k => allInstructions[k] = "j");
+  Object.keys(uInstructions).forEach(k => allInstructions[k] = "u");
+  Object.keys(specialIInstructions).forEach(k => allInstructions[k] = "special");
+}
+
+loadInstructions();
+
+
 export interface Label {
   name: string;
   line: number;
@@ -61,7 +86,8 @@ export function highlightLabels(editorEl: HTMLElement, labels: Label[]) {
       if (span && span.textContent === instr) return;
 
       const instrSpan = document.createElement("span");
-      instrSpan.className = "instr";
+      const type = allInstructions[instr];
+      instrSpan.className = `instr-${type}`;
       instrSpan.textContent = instr;
 
       div.innerHTML = "";
