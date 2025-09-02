@@ -4,6 +4,7 @@ import { extractContentAndLabels } from './utils/content-utils';
 import { handleNewLineIndent } from './utils/indent-utils';
 import { HistoryManager } from './utils/history-manager';
 import { TooltipManager } from './utils/tooltip-manager';
+import { highlightLabels } from './utils/highlight-utils';
 import { copy, handlePaste, deleteAll, undo, redo } from './utils/editor-actions';
 
 
@@ -54,15 +55,11 @@ export class TextEditor implements AfterViewInit {
       ensureFirstLineWrapped(editorEl);
       fixEmptyDivs(editorEl);
       const { text, labels } = extractContentAndLabels(editorEl);
-      this.contentChange.emit(text);
-      this.labelsChange.emit(labels);
+      this.emit(text, labels);
       this.highlightActiveLine();
       this.history.push(editorEl.innerHTML);
     });
 
-    // paste: puedes reutilizar tu lógica original (omitida aquí por brevedad),
-    // al final haz emit + highlight + history.push(...).
-    // Keydown: tab, enter, undo/redo
     editorEl.addEventListener('keydown', (event: KeyboardEvent) => {
       const isMac = navigator.platform.toLowerCase().includes('mac');
       const mod = isMac ? event.metaKey : event.ctrlKey;
@@ -83,6 +80,7 @@ export class TextEditor implements AfterViewInit {
       if (event.key === 'Tab') {
         event.preventDefault();
         this.insertTextAtCursor('\t');
+        const { text, labels } = extractContentAndLabels(editorEl);
         this.history.push(this.editor.nativeElement.innerHTML);
         return;
       }
@@ -91,9 +89,9 @@ export class TextEditor implements AfterViewInit {
         event.preventDefault();
         handleNewLineIndent(this.editor.nativeElement, () => {
           const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
-          this.contentChange.emit(text);
-          this.labelsChange.emit(labels);
+          this.emit(text, labels);
         }, () => this.highlightActiveLine());
+        const { text, labels } = extractContentAndLabels(editorEl);
         this.history.push(this.editor.nativeElement.innerHTML);
         return;
       }
@@ -120,8 +118,7 @@ export class TextEditor implements AfterViewInit {
         text,
         this.history,
         (t, labels) => {
-          this.contentChange.emit(t);
-          this.labelsChange.emit(labels);
+          this.emit(t, labels);
         },
         () => this.highlightActiveLine()
       );
@@ -133,8 +130,7 @@ export class TextEditor implements AfterViewInit {
       this.editor.nativeElement,
       this.history,
       (t, labels) => {
-        this.contentChange.emit(t);
-        this.labelsChange.emit(labels);
+        this.emit(t, labels);
       },
       () => this.highlightActiveLine()
     );
@@ -154,8 +150,7 @@ export class TextEditor implements AfterViewInit {
     ensureFirstLineWrapped(this.editor.nativeElement);
     fixEmptyDivs(this.editor.nativeElement);
     const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
-    this.contentChange.emit(text);
-    this.labelsChange.emit(labels);
+    this.emit(text, labels);
     placeCaretAtEnd(this.editor.nativeElement);
     this.highlightActiveLine();
   }
@@ -219,10 +214,19 @@ export class TextEditor implements AfterViewInit {
       editorEl.appendChild(div);
     });
     const { text: cleaned, labels } = extractContentAndLabels(editorEl);
-    this.contentChange.emit(cleaned);
-    this.labelsChange.emit(labels);
+    this.emit(cleaned, labels);
+    (labels);
     this.history.push(editorEl.innerHTML);
+    
     placeCaretAtEnd(editorEl);
     this.highlightActiveLine();
+  }
+
+  emit(textin:string, labelsin:{name:string,line:number}[])
+  {
+    this.contentChange.emit(textin);
+    this.labelsChange.emit(labelsin);
+    const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
+    highlightLabels(this.editor.nativeElement, labels);
   }
 }

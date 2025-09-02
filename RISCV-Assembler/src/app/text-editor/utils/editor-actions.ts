@@ -120,3 +120,4 @@ export function redo(history: HistoryManager, restoreContent: (html: string) => 
   const next = history.redo();
   if (next !== undefined) restoreContent(next);
 }
+

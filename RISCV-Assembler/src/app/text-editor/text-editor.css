@@ -38,3 +38,18 @@
   pointer-events: none;        /* que no bloquee el mouse */
   z-index: 9999;               /* encima de todo */
 }
+
+
+:host  ::ng-deep .has-label {
+  color: #ffcc00;  /* amarillo */
+  font-weight: bold;
+}
+
+:host  ::ng-deep .instr { color: #4cafef; font-weight: bold; }     /* R-type */
+:host  ::ng-deep .instr-r { color: #4cafef; font-weight: bold; }     /* R-type */
+:host  ::ng-deep .instr-i { color: #81c784; font-weight: bold; }     /* I-type */
+:host  ::ng-deep .instr-s { color: #ffb74d; font-weight: bold; }     /* S-type */
+:host  ::ng-deep .instr-b { color: #e57373; font-weight: bold; }     /* B-type */
+:host  ::ng-deep .instr-j { color: #ba68c8; font-weight: bold; }     /* J-type */
+:host  ::ng-deep .instr-u { color: #ffd54f; font-weight: bold; }     /* U-type */
+:host  ::ng-deep .instr-special { color: #90a4ae; font-weight: bold; } /* especiales */
