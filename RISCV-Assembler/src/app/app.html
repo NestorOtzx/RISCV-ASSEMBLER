@@ -5,11 +5,13 @@
 
   <!-- TOOLBAR -->
   <div class="flex flex-wrap justify-between items-center p-2 gap-2">
-    <button (click)="fileInput.click()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Import</button>
-    <select [(ngModel)]="selectedInputFormat" class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onInputFormatChange($event)">
-      <option value="riscv">Numbers</option>
-      <option value="binary">Direction</option>
-    </select>
+    <div class="flex flex-row gap-2">
+      <button (click)="fileInput.click()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Import</button>
+      <select [(ngModel)]="selectedLineIndexing" class="bg-gray-700 border border-gray-500 p-1 rounded border-box" (change)="onSelectedLineIndexingChange($event)">
+        <option value="numbers">Numbers</option>
+        <option value="direction">Direction</option>
+      </select>
+    </div>
     <div class="flex flex-row gap-2">
       <select [(ngModel)]="selectedInputFormat" class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onInputFormatChange($event)">
         <option value="riscv">RISCV</option>
@@ -50,7 +52,8 @@
 
 
     <!-- OUTPUT SECTION -->
-    <app-output-text [outputText]="outputText()"></app-output-text>
+    <app-output-text [outputText]="outputText()" [selectedLineIndexing]="selectedLineIndexing">
+    </app-output-text>
   </div>
 </main>
 

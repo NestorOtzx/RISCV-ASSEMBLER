@@ -24,6 +24,7 @@ import { OutputText } from './output-text/output-text';
 export class App {
   inputText = signal('');
   selectedOutputFormat = signal('binary');
+  selectedLineIndexing = signal('numbers');
   selectedInputFormat = signal('riscv');
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -65,20 +66,32 @@ export class App {
       || assembleJTypeProgressive(clean);
 
       if (clean.length > 0 && binary) {
-        result.push((lineNumber++).toString());
+        result.push(this.getLineIndex(lineNumber));
+        lineNumber++;
       } else {
-        result.push("\u00A0");
+          result.push("\u00A0");
       }
+
     }
 
     // si no hay ninguna línea válida, mostramos al menos una
-    if (result.length === 0) {
-      return ["1"];
+    if (result.length <= 1) {
+      return [this.getLineIndex(1)];
     }
 
     return result;
   });
 
+  getLineIndex(lineNumber:number): string{
+    var directionFormat;
+    if (this.selectedLineIndexing() === 'direction') {
+        const address = (0x0000+(lineNumber * 4)).toString(16).toUpperCase();
+        directionFormat = '0x' + address.padStart(4, '0');
+    }else{
+        directionFormat = lineNumber.toString();
+    }
+    return directionFormat
+  }
  
   RISCV_to_format(lines: Array<string>, format : string) {
     return lines.map((line, i) => {
@@ -135,6 +148,11 @@ export class App {
     this.selectedInputFormat.set(currOutput);
     this.selectedOutputFormat.set(aux);
     this.updateInputFormats(currInput, currOutput);
+  }
+
+  onSelectedLineIndexingChange(event: Event){
+    const selectElement = event.target as HTMLSelectElement;
+    this.selectedLineIndexing.set(selectElement.value);
   }
 
   onOutputFormatChange(event: Event) {

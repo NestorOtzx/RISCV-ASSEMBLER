@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input,Signal  } from '@angular/core';
 
 @Component({
   selector: 'app-output-text',
@@ -12,6 +12,9 @@ import { Component, Input } from '@angular/core';
 export class OutputText {
   @Input()
   outputText: string = '';
+
+  @Input() 
+  selectedLineIndexing!: Signal <string>;
 
   get outputLines(): string[] {
     return this.outputText.split('\n');
@@ -32,4 +35,30 @@ export class OutputText {
       console.log('✅ Copied with fallback');
     }
   }
+
+  get lineNumbers(): string[] {
+    var lines = this.outputLines.map((line, i) => {
+      // Si la línea está vacía o es solo un espacio, mostramos espacio en blanco
+      if (!line.trim()) return "\u00A0";
+      return this.getLineIndex(i);
+    });
+    if (lines.length <= 1)
+    {
+      lines = [this.getLineIndex(0)];
+    }
+    return lines;
+  }
+
+  getLineIndex(i: number): string{
+    if (this.selectedLineIndexing() === 'direction') {
+      // Dirección en hexadecimal, multiplicando por 4 y mínimo 4 dígitos
+      const address = ((i + 1) * 4).toString(16).toUpperCase();
+      return '0x' + address.padStart(4, '0');
+    } else {
+      // Simplemente el número de línea
+      return (i + 1).toString();
+    }
+    return ''
+  }
+
 }

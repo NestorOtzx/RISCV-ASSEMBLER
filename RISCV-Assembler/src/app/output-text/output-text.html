@@ -14,11 +14,12 @@
 
 <div class="flex overflow-auto w-full h-full">
   <!-- Line Numbers -->
-  <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none w-10 leading-[1.5rem] shrink-0">
-      @for (line of outputLines; track $index) {
-        <div class="bg-gray-900 pr-2">{{ $index + 1 }}</div>
-      }
+  <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none min-w-10 leading-[1.5rem] shrink-0">
+    @for (line of lineNumbers; track $index) {
+      <div class="bg-gray-900 px-2">{{ line }}</div>
+    }
   </div>
+
   <!-- Output Preformatted Text -->
   <pre class="flex-1 text-white pt-2 pl-2 whitespace-pre-wrap font-mono leading-[1.5rem]">{{outputText}}</pre>
 </div>
