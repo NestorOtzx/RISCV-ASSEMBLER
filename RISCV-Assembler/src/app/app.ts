@@ -1,10 +1,10 @@
-import { Component, signal, computed, ViewChild, ElementRef, AfterViewInit, Signal } from '@angular/core';
+import { Component, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from './text-editor/text-editor';
 import { saveAs } from 'file-saver';
 
-// Importa tus ensambladores
+// Ensambladores
 import { assembleRTypeProgressive } from './assembler/encoders/r-type';
 import { assembleITypeProgressive } from './assembler/encoders/i-type';
 import { assembleSTypeProgressive } from './assembler/encoders/s-type';
@@ -13,7 +13,13 @@ import { assembleSpecialITypeProgressive } from './assembler/encoders/special-i-
 import { assembleUTypeProgressive } from './assembler/encoders/u-type';
 import { assembleJTypeProgressive } from './assembler/encoders/j-type';
 import { OutputText } from './output-text/output-text';
-import { isValidInstruction } from './assembler/utils';
+
+type TranslationResult = {
+  output: string[];
+  labelMap: Record<string, number>;
+  errors: { line: number; message: string }[];
+  lineMapping: number[]; // editor line → output line, -1 si no existe
+};
 
 @Component({
   selector: 'app-root',
@@ -24,52 +30,44 @@ import { isValidInstruction } from './assembler/utils';
 })
 export class App {
   inputText = signal('');
-  selectedOutputFormat = signal('binary');
-  selectedLineIndexing = signal('numbers');
-  selectedInputFormat = signal('riscv');
+  activeLine = signal(0); // línea seleccionada en editor
+  activeOutputLine = signal(-1); // línea equivalente en output
+
+  selectedOutputFormat = signal<'binary' | 'hexadecimal' | 'riscv'>('binary');
+  selectedLineIndexing = signal<'numbers' | 'direction'>('numbers');
+  selectedInputFormat = signal<'riscv' | 'binary' | 'hexadecimal'>('riscv');
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('outputScrollContainer') outputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('editor') editor!: TextEditor;
-  
-  onEditorChange(content: string) {
-    console.log("editor change: ", content);
-    this.inputText.set(content); // sincroniza con tu signal
-  }
 
-  onLabelsChange(labels: { name: string, line: number }[]) {
-    console.log("Etiquetas detectadas:", labels);
-  }
+  // Traducción pura + mapeo de líneas
+  private RISCV_translate(lines: string[], format: string): TranslationResult {
+    const output: string[] = [];
+    const labelMap: Record<string, number> = {};
+    const errors: { line: number; message: string }[] = [];
+    const lineMapping: number[] = [];
 
-  outputText = computed(() => {
-    const lines = this.inputText().toLowerCase().split('\n');
-    const format = this.selectedOutputFormat();
-    return this.RISCV_to_format(lines, format);
-  });
+    let instructionAddress = 0;
 
-  
-
-  getLineIndex(lineNumber:number): string{
-    var directionFormat;
-    if (this.selectedLineIndexing() === 'direction') {
-        const address = (0x0000+(lineNumber * 4)).toString(16).toUpperCase();
-        directionFormat = '0x' + address.padStart(4, '0');
-    }else{
-        directionFormat = lineNumber.toString();
-    }
-    return directionFormat
-  }
- 
-  RISCV_to_format(lines: Array<string>, format : string) {
-    return lines.map((line, i) => {
+    lines.forEach((line, i) => {
       const trimmed = line.trim();
+      if (!trimmed) {
+        lineMapping.push(-1); // línea vacía → no hay output
+        return;
+      }
 
       const isLabel = /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
-
       if (isLabel) {
-        this.editor.clearWrongMark(i + 1);
-        return trimmed;
+        const labelName = trimmed.replace(':', '');
+        if (labelMap.hasOwnProperty(labelName)) {
+          errors.push({ line: i + 1, message: `Duplicated label "${labelName}"` });
+        } else {
+          labelMap[labelName] = instructionAddress;
+        }
+        lineMapping.push(-1); // etiquetas no generan output
+        return;
       }
 
       let binary = assembleRTypeProgressive(trimmed)
@@ -80,86 +78,102 @@ export class App {
         || assembleUTypeProgressive(trimmed)
         || assembleJTypeProgressive(trimmed);
 
-      console.log("line i: ", i+1, ": ", line, " binary?", binary);
-
       if (!binary) {
-        if (trimmed.length > 2) {
-          this.editor.markLineAsWrong(i+1, "This instruction doesn't exist.");
-        } else if (trimmed.length > 0) {
-          this.editor.clearWrongMark(i+1);  
-        }
-        return line;
-      } else {
-        this.editor.clearWrongMark(i+1);
+        if (trimmed.length > 0) errors.push({ line: i + 1, message: 'Invalid instruction' });
+        lineMapping.push(-1);
+        return;
       }
+
+      instructionAddress++;
+      lineMapping.push(output.length); // mapeo: editor line → índice en output
 
       switch (format) {
-        case 'binary': return binary;
-        case 'hexadecimal': return `0x${parseInt(binary, 2).toString(16).padStart(8, '0')}`;
-        default: return line;
+        case 'binary': output.push(binary); break;
+        case 'hexadecimal': output.push(`0x${parseInt(binary, 2).toString(16).padStart(8,'0')}`); break;
+        default: output.push(trimmed); break;
       }
-    }).join('\n');
+    });
+
+    return { output, labelMap, errors, lineMapping };
   }
 
+  // Computed puro
+  compiled = computed(() => {
+    const lines = this.inputText().toLowerCase().split('\n');
+    const format = this.selectedOutputFormat();
+    return this.RISCV_translate(lines, format);
+  });
 
+  outputText = computed(() => this.compiled().output.join('\n'));
+  labelMap = computed(() => this.compiled().labelMap);
 
+  // Actualizar errores en editor (fuera de computed)
+  updateEditorMarks() {
+    if (!this.editor) return;
 
-  switchFormats()
-  {
-    const currInput = this.selectedInputFormat();
-    const aux =  this.selectedInputFormat();
-    const currOutput = this.selectedOutputFormat();
-    console.log("switch formats ", currInput, aux, currOutput)
-    this.selectedInputFormat.set(currOutput);
-    this.selectedOutputFormat.set(aux);
-    this.updateInputFormats(currInput, currOutput);
+    const result = this.compiled();
+    const totalLines = this.inputText().split('\n').length;
+    for (let i = 1; i <= totalLines; i++) this.editor.clearWrongMark(i);
+    result.errors.forEach(e => this.editor.markLineAsWrong(e.line, e.message));
+
+    this.updateActiveOutputLine();
   }
 
-  onSelectedLineIndexingChange(event: Event){
-    const selectElement = event.target as HTMLSelectElement;
-    this.selectedLineIndexing.set(selectElement.value);
+  // Línea activa → output
+  updateActiveOutputLine() {
+    const editorLine = this.activeLine();
+    const mapping = this.compiled().lineMapping;
+    const outputLine = mapping[editorLine] ?? -1;
+    this.activeOutputLine.set(outputLine);
+  }
+
+  onEditorChange(content: string) {
+    this.inputText.set(content);
+    this.updateEditorMarks();
+  }
+
+  onActiveLineChange(line: number) {
+    this.activeLine.set(line);
+    this.updateActiveOutputLine();
+  }
+
+  getLineIndex(lineNumber: number): string {
+    if (this.selectedLineIndexing() === 'direction') {
+      const address = (0x0000 + lineNumber * 4).toString(16).toUpperCase();
+      return '0x' + address.padStart(4, '0');
+    }
+    return lineNumber.toString();
+  }
+
+  switchFormats() {
+    const prevInput = this.selectedInputFormat();
+    const prevOutput = this.selectedOutputFormat();
+    this.selectedInputFormat.set(prevOutput);
+    this.selectedOutputFormat.set(prevInput);
+    this.updateInputFormats(prevInput, prevOutput);
+  }
+
+  onSelectedLineIndexingChange(event: Event) {
+    this.selectedLineIndexing.set((event.target as HTMLSelectElement).value as any);
   }
 
   onOutputFormatChange(event: Event) {
-    const selectElement = event.target as HTMLSelectElement;
-    this.selectedOutputFormat.set(selectElement.value);
+    this.selectedOutputFormat.set((event.target as HTMLSelectElement).value as any);
+    this.updateEditorMarks();
   }
 
   onInputFormatChange(event: Event) {
-    const selectElement = event.target as HTMLSelectElement;
-    console.log("Changing input from: ", this.selectedInputFormat(), " to:", selectElement.value)
     const prev = this.selectedInputFormat();
-    const current = selectElement.value;
+    const current = (event.target as HTMLSelectElement).value as any;
     this.updateInputFormats(prev, current);
-    this.selectedInputFormat.set(selectElement.value);
+    this.selectedInputFormat.set(current);
   }
 
-  updateInputFormats(prev: string, current: string)
-  {
-    if (prev !== current)
-    {
-      if (prev === "riscv" && current == "binary")
-      {
+  updateInputFormats(prev: string, current: string) {
+    if (prev !== current) {
+      if (prev === 'riscv' && (current === 'binary' || current === 'hexadecimal')) {
         const lines = this.inputText().toLowerCase().split('\n');
-        const format = "binary";
-        this.inputText.set(this.RISCV_to_format(lines, format)); 
-      } else if (prev === "riscv" && current == "hexadecimal")
-      {
-        const lines = this.inputText().toLowerCase().split('\n');
-        const format = "hexadecimal";
-        this.inputText.set(this.RISCV_to_format(lines, format));
-      } else if (prev === "binary" && current == "riscv")
-      {
-
-      } else if (prev === "binary" && current == "hexadecimal")
-      {
-
-      } else if (prev === "hexadecimal" && current == "binary")
-      {
-
-      } else if (prev === "hexadecimal" && current == "riscv")
-      {
-
+        this.inputText.set(this.RISCV_translate(lines, current).output.join('\n'));
       }
     }
   }
@@ -171,28 +185,16 @@ export class App {
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
-
     const file = input.files[0];
     const reader = new FileReader();
-
-    reader.onload = () => {
-      const content = (reader.result as string).replace(/\r/g, '');
-      this.editor.setContent(content);
-    };
-
+    reader.onload = () => this.editor.setContent((reader.result as string).replace(/\r/g,''));
     reader.readAsText(file);
   }
 
   downloadOutput() {
     const format = this.selectedOutputFormat();
     let extension = 'txt';
-    if (format === 'vhdl') extension = 'vhd';
-    else if (format === 'verilog') extension = 'v';
-    else if (format === 'hexadecimal') extension = 'hex';
-
     const blob = new Blob([this.outputText()], { type: 'text/plain;charset=utf-8' });
     saveAs(blob, `output.${extension}`);
   }
-
-
 }

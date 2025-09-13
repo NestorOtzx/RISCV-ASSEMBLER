@@ -41,7 +41,7 @@
 
       <!-- Editor -->
       <app-text-editor
-        (labelsChange) ="onLabelsChange($event)"
+        (activeLineChange)="onActiveLineChange($event)"
         (contentChange)="onEditorChange($event)"
         #editor>
       </app-text-editor>
@@ -51,7 +51,10 @@
 
 
     <!-- OUTPUT SECTION -->
-    <app-output-text [outputText]="outputText()" [selectedLineIndexing]="selectedLineIndexing">
+    <app-output-text
+      [outputText]="outputText()"
+      [selectedLineIndexing]="selectedLineIndexing"
+      [activeOutputLineIndex]="activeOutputLine()">
     </app-output-text>
   </div>
 </main>

@@ -28,9 +28,7 @@ export interface Label {
   line: number;
 }
 
-export function highlightLabels(editorEl: HTMLElement, labels: Label[]) {
-  console.log("tokens: highlight labels");
-  // --- guardar posición del cursor ---
+export function highlightText(editorEl: HTMLElement, labels: Label[]) {
   const selection = window.getSelection();
   let caretInfo: { divIndex: number; offset: number } | null = null;
   try {
@@ -75,7 +73,6 @@ export function highlightLabels(editorEl: HTMLElement, labels: Label[]) {
     const trimmed = text.slice(leading.length);
 
     const tokens = trimmed.split(/\s+/);
-    console.log("tokens:",tokens);
 
     if (tokens.length >= 2 && tokens[0]) {
       const instr = tokens[0];

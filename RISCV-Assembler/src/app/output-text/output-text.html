@@ -16,10 +16,20 @@
   <!-- Line Numbers -->
   <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none min-w-10 leading-[1.5rem] shrink-0">
     @for (line of lineNumbers; track $index) {
-      <div class="bg-gray-900 px-2">{{ line }}</div>
+      <div class="px-2 leading-[1.5rem]">
+        {{ line }}
+      </div>
     }
   </div>
 
   <!-- Output Preformatted Text -->
-  <pre class="flex-1 text-white pt-2 pl-2 whitespace-pre-wrap font-mono leading-[1.5rem]">{{outputText}}</pre>
+  <div class="flex-1 text-white pt-2 font-mono">
+    @for (line of outputLines; track $index) {
+      <div class="leading-[1.5rem] whitespace-pre"
+           [class.active-line]="activeOutputLineIndex === $index"
+           [class.unactive-line]="activeOutputLineIndex !== $index">
+        {{ line }}
+      </div>
+    }
+  </div>
 </div>

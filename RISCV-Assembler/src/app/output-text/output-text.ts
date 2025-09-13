@@ -16,6 +16,10 @@ export class OutputText {
   @Input() 
   selectedLineIndexing!: Signal <string>;
 
+  @Input()
+  activeOutputLineIndex: number | null = null;
+
+
   get outputLines(): string[] {
     return this.outputText.split('\n');
   }
@@ -32,7 +36,6 @@ export class OutputText {
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-      console.log('✅ Copied with fallback');
     }
   }
 

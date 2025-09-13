@@ -4,7 +4,7 @@ import { extractContentAndLabels } from './utils/content-utils';
 import { handleNewLineIndent } from './utils/indent-utils';
 import { HistoryManager } from './utils/history-manager';
 import { TooltipManager } from './utils/tooltip-manager';
-import { highlightLabels } from './utils/highlight-utils';
+import { highlightText } from './utils/highlight-utils';
 import { copy, handlePaste, deleteAll, undo, redo } from './utils/editor-actions';
 import { isValidInstruction } from '../assembler/utils';
 
@@ -19,9 +19,9 @@ import { isValidInstruction } from '../assembler/utils';
 export class TextEditor implements AfterViewInit {
   @ViewChild('editor', { static: true }) editor!: ElementRef<HTMLDivElement>;
   @Output() contentChange = new EventEmitter<string>();
-  @Output() labelsChange = new EventEmitter<{ name: string, line: number }[]>();
-  
-  lineCounter: string[] = [];
+  @Output() activeLineChange = new EventEmitter<number>();
+
+  lineCounter: string[] = ['1'];
 
   private history = new HistoryManager(200);
   private tooltip!: TooltipManager;
@@ -180,12 +180,20 @@ export class TextEditor implements AfterViewInit {
     if (!targetNode) return;
     const lineDiv = getClosestDiv(targetNode, this.editor.nativeElement);
     if (!lineDiv) return;
+
     const editorEl = this.editor.nativeElement;
-    editorEl.querySelectorAll('div').forEach(div => {
+    const divs = Array.from(editorEl.querySelectorAll('div'));
+
+    divs.forEach(div => {
       div.classList.remove('active-line', 'unactive-line');
       if (div === lineDiv) div.classList.add('active-line');
       else div.classList.add('unactive-line');
     });
+
+    const activeIndex = divs.indexOf(lineDiv);
+    if (activeIndex !== -1) {
+      this.activeLineChange.emit(activeIndex); 
+    }
   }
 
   markLineAsWrong(lineNumber: number, errorMessage?: string) {
@@ -227,13 +235,12 @@ export class TextEditor implements AfterViewInit {
   emit(textin:string, labelsin:{name:string,line:number}[])
   {
     this.contentChange.emit(textin);
-    this.labelsChange.emit(labelsin);
     const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
     this.updateLineCounter(text);
-    highlightLabels(this.editor.nativeElement, labels);
+    highlightText(this.editor.nativeElement, labels);
   }
 
-   private updateLineCounter(text: string) {
+  private updateLineCounter(text: string) {
     const rawLines = text.split('\n');
     const result: string[] = [];
 
