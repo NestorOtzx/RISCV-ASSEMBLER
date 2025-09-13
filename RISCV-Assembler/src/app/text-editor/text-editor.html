@@ -59,7 +59,7 @@
 <div class="flex overflow-auto w-full h-full">
   <!-- Números de línea -->
   <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none min-w-10 leading-[1.5rem] shrink-0">
-    @for (line of lines; track $index) {
+    @for (line of lineCounter; track $index) {
       <div class="bg-gray-900 px-2">{{ line }}</div>
     }
   </div>

@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter, Input } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter, Input, computed } from '@angular/core';
 import { ensureFirstLineWrapped, getClosestDiv, placeCaretAtEnd, fixEmptyDivs } from './utils/dom-utils';
 import { extractContentAndLabels } from './utils/content-utils';
 import { handleNewLineIndent } from './utils/indent-utils';
@@ -6,6 +6,7 @@ import { HistoryManager } from './utils/history-manager';
 import { TooltipManager } from './utils/tooltip-manager';
 import { highlightLabels } from './utils/highlight-utils';
 import { copy, handlePaste, deleteAll, undo, redo } from './utils/editor-actions';
+import { isValidInstruction } from '../assembler/utils';
 
 
 
@@ -19,7 +20,8 @@ export class TextEditor implements AfterViewInit {
   @ViewChild('editor', { static: true }) editor!: ElementRef<HTMLDivElement>;
   @Output() contentChange = new EventEmitter<string>();
   @Output() labelsChange = new EventEmitter<{ name: string, line: number }[]>();
-  @Input() lines: string[] = ['1'];
+  
+  lineCounter: string[] = [];
 
   private history = new HistoryManager(200);
   private tooltip!: TooltipManager;
@@ -227,6 +229,29 @@ export class TextEditor implements AfterViewInit {
     this.contentChange.emit(textin);
     this.labelsChange.emit(labelsin);
     const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
+    this.updateLineCounter(text);
     highlightLabels(this.editor.nativeElement, labels);
+  }
+
+   private updateLineCounter(text: string) {
+    const rawLines = text.split('\n');
+    const result: string[] = [];
+
+    let lineNumber = 1;
+    for (const raw of rawLines) {
+      const clean = raw.trim();
+      if (clean.length > 0 && isValidInstruction(clean)) {
+        result.push(lineNumber.toString());
+        lineNumber++;
+      } else {
+        result.push('\u00A0'); // espacio si no es válida
+      }
+    }
+
+    if (result.length <= 1) {
+      this.lineCounter = ['1'];
+    } else {
+      this.lineCounter = result;
+    }
   }
 }

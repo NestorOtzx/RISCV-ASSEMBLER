@@ -13,6 +13,7 @@ import { assembleSpecialITypeProgressive } from './assembler/encoders/special-i-
 import { assembleUTypeProgressive } from './assembler/encoders/u-type';
 import { assembleJTypeProgressive } from './assembler/encoders/j-type';
 import { OutputText } from './output-text/output-text';
+import { isValidInstruction } from './assembler/utils';
 
 @Component({
   selector: 'app-root',
@@ -47,40 +48,7 @@ export class App {
     return this.RISCV_to_format(lines, format);
   });
 
-  lines = computed(() => {
-    const content = this.inputText();
-    const rawLines = content.split("\n");
-
-    let lineNumber = 1;
-    const result: string[] = [];
-
-    for (const raw of rawLines) {
-      const clean = raw.trim();
-
-      const binary = assembleRTypeProgressive(clean)
-      || assembleITypeProgressive(clean)
-      || assembleSTypeProgressive(clean)
-      || assembleBTypeProgressive(clean)
-      || assembleSpecialITypeProgressive(clean)
-      || assembleUTypeProgressive(clean)
-      || assembleJTypeProgressive(clean);
-
-      if (clean.length > 0 && binary) {
-        result.push(this.getLineIndex(lineNumber));
-        lineNumber++;
-      } else {
-          result.push("\u00A0");
-      }
-
-    }
-
-    // si no hay ninguna línea válida, mostramos al menos una
-    if (result.length <= 1) {
-      return [this.getLineIndex(1)];
-    }
-
-    return result;
-  });
+  
 
   getLineIndex(lineNumber:number): string{
     var directionFormat;
@@ -97,15 +65,13 @@ export class App {
     return lines.map((line, i) => {
       const trimmed = line.trim();
 
-      // 🔹 Detectar etiquetas (terminan en ':' y no tienen espacios intermedios)
       const isLabel = /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
 
       if (isLabel) {
         this.editor.clearWrongMark(i + 1);
-        return trimmed; // las dejamos igual
+        return trimmed;
       }
 
-      // 🔹 Probar ensambladores
       let binary = assembleRTypeProgressive(trimmed)
         || assembleITypeProgressive(trimmed)
         || assembleSTypeProgressive(trimmed)
@@ -127,7 +93,6 @@ export class App {
         this.editor.clearWrongMark(i+1);
       }
 
-      // 🔹 Formato de salida
       switch (format) {
         case 'binary': return binary;
         case 'hexadecimal': return `0x${parseInt(binary, 2).toString(16).padStart(8, '0')}`;

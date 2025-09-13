@@ -1,3 +1,13 @@
+import { 
+  rInstructions, 
+  iInstructions, 
+  sInstructions, 
+  bInstructions, 
+  jInstructions, 
+  uInstructions, 
+  specialIInstructions 
+} from './instruction-tables';
+
 export function registerToBinary(reg: string | undefined): string {
   if (!reg || !reg.startsWith('x')) return '00000';
   const regNum = parseInt(reg.slice(1));
@@ -17,4 +27,21 @@ export function parseImmediate(token: string): number {
     return parseInt(token, 10);
   }
   return 0;
+}
+
+export function isValidInstruction(line: string): boolean {
+  if (!line) return false;
+
+  const tokens = line.split(/[\s,()]+/);
+  const mnemonic = tokens[0];
+
+  return (
+    mnemonic in rInstructions ||
+    mnemonic in iInstructions ||
+    mnemonic in sInstructions ||
+    mnemonic in bInstructions ||
+    mnemonic in jInstructions ||
+    mnemonic in uInstructions ||
+    mnemonic in specialIInstructions
+  );
 }
