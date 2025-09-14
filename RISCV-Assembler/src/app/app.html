@@ -11,10 +11,7 @@
         <option value="numbers">Numbers</option>
         <option value="direction">Direction</option>
       </select>
-      <select [(ngModel)]="selectedConvertMethod" class="bg-gray-700 border border-gray-500 p-1 rounded border-box" (change)="onSelectedConvertMethod($event)">
-        <option value="automatic">Automatic</option>
-        <option value="manual">Manual</option>
-      </select>
+      
         
     </div>
     <div class="flex flex-row gap-2">
@@ -33,6 +30,10 @@
       </select>
     </div>
     <div class="flex gap-2">
+      <select [(ngModel)]="selectedConvertMethod" class="bg-gray-700 border border-gray-500 p-1 rounded border-box" (change)="onSelectedConvertMethod($event)">
+        <option value="automatic">Automatic</option>
+        <option value="manual">Manual</option>
+      </select>
       <button (click)="downloadOutput()" class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded">Download</button>
     </div>
   </div>

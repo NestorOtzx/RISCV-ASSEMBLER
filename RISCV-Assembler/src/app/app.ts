@@ -107,6 +107,8 @@ export class App {
     const format = this.selectedOutputFormat();
     const result = this.RISCV_translate(lines, format);
     this.outputTextSignal.set(result.output.join('\n'));
+    this.compiled.set(result);
+    this.updateEditorMarks();
   }
 
   get outputText(): string {
