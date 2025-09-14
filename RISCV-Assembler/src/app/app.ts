@@ -3,23 +3,8 @@ import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from './text-editor/text-editor';
 import { saveAs } from 'file-saver';
-
-// Ensambladores
-import { assembleRTypeProgressive } from './assembler/encoders/r-type';
-import { assembleITypeProgressive } from './assembler/encoders/i-type';
-import { assembleSTypeProgressive } from './assembler/encoders/s-type';
-import { assembleBTypeProgressive } from './assembler/encoders/b-type';
-import { assembleSpecialITypeProgressive } from './assembler/encoders/special-i-type';
-import { assembleUTypeProgressive } from './assembler/encoders/u-type';
-import { assembleJTypeProgressive } from './assembler/encoders/j-type';
 import { OutputText } from './output-text/output-text';
-
-type TranslationResult = {
-  output: string[];
-  labelMap: Record<string, number>;
-  errors: { line: number; message: string }[];
-  lineMapping: number[]; // editor line → output line, -1 si no existe
-};
+import { BinaryToRiscV, RiscVToBinary, TranslationResult } from './assembler/translator';
 
 @Component({
   selector: 'app-root',
@@ -30,13 +15,13 @@ type TranslationResult = {
 })
 export class App {
   inputText = signal('');
-  activeLine = signal(0); // línea seleccionada en editor
-  activeOutputLine = signal(-1); // línea equivalente en output
+  activeLine = signal(0);
+  activeOutputLine = signal(-1);
   outputTextSignal = signal('');
 
+  selectedInputFormat = signal<'riscv' | 'binary' | 'hexadecimal'>('riscv');
   selectedOutputFormat = signal<'binary' | 'hexadecimal' | 'riscv'>('binary');
   selectedLineIndexing = signal<'numbers' | 'direction'>('numbers');
-  selectedInputFormat = signal<'riscv' | 'binary' | 'hexadecimal'>('riscv');
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
@@ -46,66 +31,16 @@ export class App {
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
 
-
-  // Traducción pura + mapeo de líneas
-  private RISCV_translate(lines: string[], format: string): TranslationResult {
-    const output: string[] = [];
-    const labelMap: Record<string, number> = {};
-    const errors: { line: number; message: string }[] = [];
-    const lineMapping: number[] = [];
-
-    let instructionAddress = 0;
-
-    lines.forEach((line, i) => {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        lineMapping.push(-1); // línea vacía → no hay output
-        return;
-      }
-
-      const isLabel = /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
-      if (isLabel) {
-        const labelName = trimmed.replace(':', '');
-        if (labelMap.hasOwnProperty(labelName)) {
-          errors.push({ line: i + 1, message: `Duplicated label "${labelName}"` });
-        } else {
-          labelMap[labelName] = instructionAddress;
-        }
-        lineMapping.push(-1); // etiquetas no generan output
-        return;
-      }
-
-      let binary = assembleRTypeProgressive(trimmed)
-        || assembleITypeProgressive(trimmed)
-        || assembleSTypeProgressive(trimmed)
-        || assembleBTypeProgressive(trimmed)
-        || assembleSpecialITypeProgressive(trimmed)
-        || assembleUTypeProgressive(trimmed)
-        || assembleJTypeProgressive(trimmed);
-
-      if (!binary) {
-        if (trimmed.length > 0) errors.push({ line: i + 1, message: 'Invalid instruction' });
-        lineMapping.push(-1);
-        return;
-      }
-
-      instructionAddress++;
-      lineMapping.push(output.length); // mapeo: editor line → índice en output
-
-      switch (format) {
-        case 'binary': output.push(binary); break;
-        case 'hexadecimal': output.push(`0x${parseInt(binary, 2).toString(16).padStart(8,'0')}`); break;
-        default: output.push(trimmed); break;
-      }
-    });
-
-    return { output, labelMap, errors, lineMapping };
-  }
-
   convert() {
     const lines = this.inputText().toLowerCase().split('\n');
     const format = this.selectedOutputFormat();
-    const result = this.RISCV_translate(lines, format);
+    let result;
+    if (this.selectedInputFormat() == 'binary' && this.selectedOutputFormat() == 'riscv')
+    {
+      result = BinaryToRiscV(lines);
+    }else{
+      result = RiscVToBinary(lines,format);
+    }
     this.outputTextSignal.set(result.output.join('\n'));
     this.compiled.set(result);
     this.updateEditorMarks();
@@ -188,9 +123,9 @@ export class App {
 
   updateInputFormats(prev: string, current: string) {
     if (prev !== current) {
-      if (prev === 'riscv' && (current === 'binary' || current === 'hexadecimal')) {
+      if (prev === 'riscv' && current === 'binary') {
         const lines = this.inputText().toLowerCase().split('\n');
-        this.inputText.set(this.RISCV_translate(lines, current).output.join('\n'));
+        this.inputText.set(RiscVToBinary(lines, current).output.join('\n'));
       }
     }
   }

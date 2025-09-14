@@ -39,3 +39,28 @@ export function assembleITypeProgressive(instruction: string): string | null {
 
   return `${immBin}${rs1Bin}${instrData.funct3}${rdBin}${instrData.opcode}`.slice(-32);
 }
+
+export function decodeITypeProgressive(binary: string): string | null {
+  if (!binary || binary.length === 0) return null;
+  const padded = binary.padStart(32, '0');
+
+  const opcode = padded.slice(-7);
+  const rdBin = padded.slice(20, 25);
+  const funct3 = padded.slice(17, 20);
+  const rs1Bin = padded.slice(12, 17);
+  const immBin = padded.slice(0, 12);
+
+  // Buscar instrucción que coincida exactamente con opcode y funct3 (si existe)
+  const entry = Object.entries(iInstructions).find(
+    ([, data]) => data.opcode === opcode && (!data.funct3 || data.funct3 === funct3)
+  );
+
+  if (!entry) return null; // No se pudo decodificar
+
+  const mnemonic = entry[0];
+  const rd = rdBin ? `x${parseInt(rdBin, 2)}` : '';
+  const rs1 = rs1Bin ? `x${parseInt(rs1Bin, 2)}` : '';
+  const imm = immBin ? parseInt(immBin, 2) : 0;
+
+  return `${mnemonic} ${rd} ${rs1} ${imm}`.trim();
+}

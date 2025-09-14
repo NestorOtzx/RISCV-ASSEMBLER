@@ -13,3 +13,26 @@ export function assembleUTypeProgressive(instruction: string): string | null {
 
   return `${immBin}${rdBin}${instrData.opcode}`.slice(-32);
 }
+
+
+export function decodeUTypeProgressive(binary: string): string | null {
+  if (!binary || binary.length === 0) return null;
+  const padded = binary.padStart(32, '0');
+
+  const opcode = padded.slice(-7);
+  const rdBin = padded.slice(20, 25);
+  const immBin = padded.slice(0, 20);
+
+  // Buscar instrucción que coincida exactamente con el opcode
+  const entry = Object.entries(uInstructions).find(
+    ([, data]) => data.opcode === opcode
+  );
+
+  if (!entry) return null; // Si no hay coincidencia, retornar null
+
+  const mnemonic = entry[0];
+  const rd = rdBin ? `x${parseInt(rdBin, 2)}` : '';
+  const imm = parseInt(immBin + '000000000000', 2); // desplazamiento 12 bits
+
+  return `${mnemonic} ${rd} ${imm}`.trim();
+}
