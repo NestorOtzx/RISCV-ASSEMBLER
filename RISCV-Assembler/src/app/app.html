@@ -11,6 +11,11 @@
         <option value="numbers">Numbers</option>
         <option value="direction">Direction</option>
       </select>
+      <select [(ngModel)]="selectedConvertMethod" class="bg-gray-700 border border-gray-500 p-1 rounded border-box" (change)="onSelectedConvertMethod($event)">
+        <option value="automatic">Automatic</option>
+        <option value="manual">Manual</option>
+      </select>
+        
     </div>
     <div class="flex flex-row gap-2">
       <select [(ngModel)]="selectedInputFormat" class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onInputFormatChange($event)">
@@ -33,7 +38,7 @@
   </div>
 
   <!-- INPUT + OUTPUT -->
-  <div class="flex flex-col md:flex-row h-[calc(100%-7.5rem)] p-4 gap-4">
+  <div class="flex flex-col md:flex-row h-[calc(100%-6.5rem)] p-4 gap-4">
     <!-- INPUT SECTION -->
     <div class="flex flex-col md:w-1/2 w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono relative">
       <!-- Toolbar flotante -->
@@ -43,6 +48,7 @@
       <app-text-editor
         (activeLineChange)="onActiveLineChange($event)"
         (contentChange)="onEditorChange($event)"
+        [lineIndexing]="selectedLineIndexing()"
         #editor>
       </app-text-editor>
 
@@ -52,11 +58,21 @@
 
     <!-- OUTPUT SECTION -->
     <app-output-text
-      [outputText]="outputText()"
+      [outputText]="outputTextSignal()"
       [selectedLineIndexing]="selectedLineIndexing"
-      [activeOutputLineIndex]="activeOutputLine()">
+      [activeOutputLineIndex]="activeOutputLine()"
+      >
     </app-output-text>
   </div>
-</main>
+  <div class="absolute bottom-2 left-0 w-full flex flex-row gap-2 justify-center z-50">
+    @if (selectedConvertMethod() === 'manual') {
+      <button (click)="convert()" 
+              class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded shadow-lg">
+        Convert
+      </button>
+    }
+  </div>
 
+
+</main>
 <router-outlet />

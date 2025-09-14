@@ -18,10 +18,24 @@ import { isValidInstruction } from '../assembler/utils';
 })
 export class TextEditor implements AfterViewInit {
   @ViewChild('editor', { static: true }) editor!: ElementRef<HTMLDivElement>;
+  private _lineIndexing: 'numbers' | 'direction' = 'numbers';
+
+  @Input()
+  set lineIndexing(value: 'numbers' | 'direction') {
+    this._lineIndexing = value;
+    // recalcula los números de línea con la nueva forma
+    const { text } = extractContentAndLabels(this.editor.nativeElement);
+    this.updateLineCounter(text);
+  }
+
+  get lineIndexing(): 'numbers' | 'direction' {
+    return this._lineIndexing;
+  }
+
   @Output() contentChange = new EventEmitter<string>();
   @Output() activeLineChange = new EventEmitter<number>();
 
-  lineCounter: string[] = ['1'];
+  lineCounter: string[] = [this.getLineIndex(1)];
 
   private history = new HistoryManager(200);
   private tooltip!: TooltipManager;
@@ -107,6 +121,15 @@ export class TextEditor implements AfterViewInit {
       if (sel && editorEl.contains(sel.anchorNode)) this.highlightActiveLine();
     });
   }
+
+  getLineIndex(lineNumber: number): string {
+    if (this.lineIndexing === 'direction') {
+      const address = (0x0000 + lineNumber * 4).toString(16).toUpperCase();
+      return '0x' + address.padStart(4, '0');
+    }
+    return lineNumber.toString();
+  }
+
 
   async copy() {
     await copy(this.editor.nativeElement);
@@ -248,7 +271,7 @@ export class TextEditor implements AfterViewInit {
     for (const raw of rawLines) {
       const clean = raw.trim();
       if (clean.length > 0 && isValidInstruction(clean)) {
-        result.push(lineNumber.toString());
+        result.push(this.getLineIndex(lineNumber));
         lineNumber++;
       } else {
         result.push('\u00A0'); // espacio si no es válida
@@ -256,7 +279,7 @@ export class TextEditor implements AfterViewInit {
     }
 
     if (result.length <= 1) {
-      this.lineCounter = ['1'];
+      this.lineCounter = [this.getLineIndex(1)];
     } else {
       this.lineCounter = result;
     }

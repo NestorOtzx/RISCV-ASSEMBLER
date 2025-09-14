@@ -32,6 +32,7 @@ export class App {
   inputText = signal('');
   activeLine = signal(0); // línea seleccionada en editor
   activeOutputLine = signal(-1); // línea equivalente en output
+  outputTextSignal = signal('');
 
   selectedOutputFormat = signal<'binary' | 'hexadecimal' | 'riscv'>('binary');
   selectedLineIndexing = signal<'numbers' | 'direction'>('numbers');
@@ -41,6 +42,10 @@ export class App {
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('outputScrollContainer') outputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('editor') editor!: TextEditor;
+
+  selectedConvertMethod = signal("automatic"); // nuevo
+  compiled = signal<TranslationResult | null>(null); // antes era computed
+
 
   // Traducción pura + mapeo de líneas
   private RISCV_translate(lines: string[], format: string): TranslationResult {
@@ -97,15 +102,21 @@ export class App {
     return { output, labelMap, errors, lineMapping };
   }
 
-  // Computed puro
-  compiled = computed(() => {
+  convert() {
     const lines = this.inputText().toLowerCase().split('\n');
     const format = this.selectedOutputFormat();
-    return this.RISCV_translate(lines, format);
-  });
+    const result = this.RISCV_translate(lines, format);
+    this.outputTextSignal.set(result.output.join('\n'));
+  }
 
-  outputText = computed(() => this.compiled().output.join('\n'));
-  labelMap = computed(() => this.compiled().labelMap);
+  get outputText(): string {
+    return this.compiled()?.output.join('\n') ?? '';
+  }
+
+  get labelMap(): Record<string, number> {
+    return this.compiled()?.labelMap ?? {};
+  }
+
 
   // Actualizar errores en editor (fuera de computed)
   updateEditorMarks() {
@@ -114,7 +125,7 @@ export class App {
     const result = this.compiled();
     const totalLines = this.inputText().split('\n').length;
     for (let i = 1; i <= totalLines; i++) this.editor.clearWrongMark(i);
-    result.errors.forEach(e => this.editor.markLineAsWrong(e.line, e.message));
+    result?.errors.forEach(e => this.editor.markLineAsWrong(e.line, e.message));
 
     this.updateActiveOutputLine();
   }
@@ -122,28 +133,31 @@ export class App {
   // Línea activa → output
   updateActiveOutputLine() {
     const editorLine = this.activeLine();
-    const mapping = this.compiled().lineMapping;
-    const outputLine = mapping[editorLine] ?? -1;
-    this.activeOutputLine.set(outputLine);
+    const mapping = this.compiled()?.lineMapping;
+    if (mapping)
+    {
+      const outputLine = mapping[editorLine] ?? -1;
+      this.activeOutputLine.set(outputLine);
+    }
   }
 
   onEditorChange(content: string) {
     this.inputText.set(content);
-    this.updateEditorMarks();
+    if (this.selectedConvertMethod() === 'automatic') this.convert(); // solo si autoAssemble
   }
+
+  onSelectedConvertMethod(event: Event) {
+    this.selectedConvertMethod.set((event.target as HTMLSelectElement).value as any);
+    this.convert();
+  }
+
 
   onActiveLineChange(line: number) {
     this.activeLine.set(line);
     this.updateActiveOutputLine();
   }
 
-  getLineIndex(lineNumber: number): string {
-    if (this.selectedLineIndexing() === 'direction') {
-      const address = (0x0000 + lineNumber * 4).toString(16).toUpperCase();
-      return '0x' + address.padStart(4, '0');
-    }
-    return lineNumber.toString();
-  }
+  
 
   switchFormats() {
     const prevInput = this.selectedInputFormat();
@@ -159,8 +173,9 @@ export class App {
 
   onOutputFormatChange(event: Event) {
     this.selectedOutputFormat.set((event.target as HTMLSelectElement).value as any);
-    this.updateEditorMarks();
+    if (this.selectedConvertMethod() == 'automatic') this.convert();
   }
+
 
   onInputFormatChange(event: Event) {
     const prev = this.selectedInputFormat();
@@ -194,7 +209,7 @@ export class App {
   downloadOutput() {
     const format = this.selectedOutputFormat();
     let extension = 'txt';
-    const blob = new Blob([this.outputText()], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([this.outputTextSignal()], { type: 'text/plain;charset=utf-8' });
     saveAs(blob, `output.${extension}`);
   }
 }
