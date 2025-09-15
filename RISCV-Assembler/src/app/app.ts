@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TextEditor } from './text-editor/text-editor';
 import { saveAs } from 'file-saver';
 import { OutputText } from './output-text/output-text';
-import { BinaryToRiscV, RiscVToBinary, TranslationResult } from './assembler/translator';
+import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion,  } from './assembler/translator';
 
 @Component({
   selector: 'app-root',
@@ -20,6 +20,7 @@ export class App {
   outputTextSignal = signal('');
 
   selectedInputFormat = signal<'riscv' | 'binary' | 'hexadecimal'>('riscv');
+  previousInputFormat = 'riscv'
   selectedOutputFormat = signal<'binary' | 'hexadecimal' | 'riscv'>('binary');
   selectedLineIndexing = signal<'numbers' | 'direction'>('numbers');
 
@@ -31,20 +32,46 @@ export class App {
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
 
-  convert() {
+  convertInputToOutput() {
     const lines = this.inputText().toLowerCase().split('\n');
-    const format = this.selectedOutputFormat();
-    let result;
-    if (this.selectedInputFormat() == 'binary' && this.selectedOutputFormat() == 'riscv')
+    const result = this.convertTextToFormat(lines, this.selectedInputFormat(), this.selectedOutputFormat());
+    
+    if (result != null)
+    {
+      this.outputTextSignal.set(result.output.join('\n'));
+      this.compiled.set(result);
+      this.updateEditorMarks();
+    }
+  }
+
+  convertTextToFormat(lines: string[], from_format: string, to_format: string): TranslationResult | null
+  {
+    console.log("convert text to format");
+    let result: TranslationResult | null;
+    if (from_format == 'binary' && to_format == 'riscv')
     {
       result = BinaryToRiscV(lines);
-    }else{
-      result = RiscVToBinary(lines,format);
     }
-    this.outputTextSignal.set(result.output.join('\n'));
-    this.compiled.set(result);
-    this.updateEditorMarks();
+    else if (from_format == 'binary' && to_format == 'hexadecimal')
+    {
+      result = BinaryToHex(lines);
+    }
+    else if (from_format == 'hexadecimal' && to_format == 'riscv'){
+      result = BinaryToRiscV(HexToBinary(lines).output);
+    }else if (from_format == 'hexadecimal' && to_format == 'binary'){
+      result = HexToBinary(lines);
+    }else if (from_format == 'riscv' && to_format == 'binary'){
+      result = RiscVToBinary(lines);
+    }else if (from_format == 'riscv' && to_format == 'hexadecimal'){
+      result = BinaryToHex(RiscVToBinary(lines).output);
+    }
+    else{
+      result = NoConversion(lines);
+    }
+    return result;
   }
+
+
 
   get outputText(): string {
     return this.compiled()?.output.join('\n') ?? '';
@@ -55,7 +82,6 @@ export class App {
   }
 
 
-  // Actualizar errores en editor (fuera de computed)
   updateEditorMarks() {
     if (!this.editor) return;
 
@@ -80,12 +106,12 @@ export class App {
 
   onEditorChange(content: string) {
     this.inputText.set(content);
-    if (this.selectedConvertMethod() === 'automatic') this.convert(); // solo si autoAssemble
+    if (this.selectedConvertMethod() === 'automatic') this.convertInputToOutput(); // solo si autoAssemble
   }
 
   onSelectedConvertMethod(event: Event) {
     this.selectedConvertMethod.set((event.target as HTMLSelectElement).value as any);
-    this.convert();
+    this.convertInputToOutput();
   }
 
 
@@ -110,23 +136,22 @@ export class App {
 
   onOutputFormatChange(event: Event) {
     this.selectedOutputFormat.set((event.target as HTMLSelectElement).value as any);
-    if (this.selectedConvertMethod() == 'automatic') this.convert();
+    if (this.selectedConvertMethod() == 'automatic') this.convertInputToOutput();
   }
 
 
   onInputFormatChange(event: Event) {
-    const prev = this.selectedInputFormat();
+    const prev = this.previousInputFormat;
     const current = (event.target as HTMLSelectElement).value as any;
     this.updateInputFormats(prev, current);
-    this.selectedInputFormat.set(current);
+    this.previousInputFormat = current;
   }
 
   updateInputFormats(prev: string, current: string) {
+    console.log("input format change "+prev + " "+ current);
     if (prev !== current) {
-      if (prev === 'riscv' && current === 'binary') {
-        const lines = this.inputText().toLowerCase().split('\n');
-        this.inputText.set(RiscVToBinary(lines, current).output.join('\n'));
-      }
+      this.editor.setContent(this.convertTextToFormat(this.inputText().split('\n'), prev, current)?.output.join('\n')||'')
+      this.convertInputToOutput();
     }
   }
 

@@ -14,7 +14,7 @@ export type TranslationResult = {
 };
   
 
-export function RiscVToBinary(lines: string[], format: string): TranslationResult {
+export function RiscVToBinary(lines: string[]): TranslationResult {
     const output: string[] = [];
     const labelMap: Record<string, number> = {};
     const errors: { line: number; message: string }[] = [];
@@ -57,12 +57,7 @@ export function RiscVToBinary(lines: string[], format: string): TranslationResul
 
       instructionAddress++;
       lineMapping.push(output.length); // mapeo: editor line → índice en output
-
-      switch (format) {
-        case 'binary': output.push(binary); break;
-        case 'hexadecimal': output.push(`0x${parseInt(binary, 2).toString(16).padStart(8,'0')}`); break;
-        default: output.push(trimmed); break;
-      }
+      output.push(binary);
     });
 
     return { output, labelMap, errors, lineMapping };
@@ -121,4 +116,69 @@ export function BinaryToRiscV(lines: string[]): TranslationResult {
   });
 
   return { output, labelMap, errors, lineMapping };
+}
+
+
+// 1️⃣ Binario → Hexadecimal
+export function BinaryToHex(lines: string[]): TranslationResult {
+  const output: string[] = [];
+  const errors: { line: number; message: string }[] = [];
+  const lineMapping: number[] = [];
+
+  lines.forEach((line, i) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      lineMapping.push(-1);
+      return;
+    }
+
+    try {
+      const hex = `0x${parseInt(trimmed, 2).toString(16).padStart(8, '0')}`;
+      output.push(hex);
+      lineMapping.push(output.length - 1);
+    } catch {
+      errors.push({ line: i + 1, message: 'Invalid binary string' });
+      lineMapping.push(-1);
+    }
+  });
+
+  return { output, labelMap: {}, errors, lineMapping };
+}
+
+// 2️⃣ Hexadecimal → Binario
+export function HexToBinary(lines: string[]): TranslationResult {
+  const output: string[] = [];
+  const errors: { line: number; message: string }[] = [];
+  const lineMapping: number[] = [];
+
+  lines.forEach((line, i) => {
+    const trimmed = line.trim().replace(/^0x/i, '');
+    if (!trimmed) {
+      lineMapping.push(-1);
+      return;
+    }
+
+    try {
+      const binary = parseInt(trimmed, 16).toString(2).padStart(32, '0');
+      output.push(binary);
+      lineMapping.push(output.length - 1);
+    } catch {
+      errors.push({ line: i + 1, message: 'Invalid hexadecimal string' });
+      lineMapping.push(-1);
+    }
+  });
+
+  return { output, labelMap: {}, errors, lineMapping };
+}
+
+// 3️⃣ Valor por defecto (no hace conversión)
+export function NoConversion(lines: string[]): TranslationResult {
+  const output: string[] = [...lines];
+  const lineMapping = lines.map((_, i) => i);
+  return {
+    output,
+    labelMap: {},      // Sin etiquetas detectadas
+    errors: [],        // Sin errores
+    lineMapping        // Mapeo directo
+  };
 }
