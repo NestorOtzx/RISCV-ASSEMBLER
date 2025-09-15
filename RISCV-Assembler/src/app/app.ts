@@ -133,6 +133,7 @@ export class App {
     const prevOutput = this.selectedOutputFormat();
     this.selectedInputFormat.set(prevOutput);
     this.selectedOutputFormat.set(prevInput);
+    this.previousInputFormat = prevOutput;
     this.updateInputFormats(prevInput, prevOutput);
   }
 
