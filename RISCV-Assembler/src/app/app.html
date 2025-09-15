@@ -39,31 +39,20 @@
   </div>
 
   <!-- INPUT + OUTPUT -->
+    <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
+
   <div class="flex flex-col md:flex-row h-[calc(100%-6.5rem)] p-4 gap-4">
-    <!-- INPUT SECTION -->
-    <div class="flex flex-col md:w-1/2 w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono relative">
-      <!-- Toolbar flotante -->
-     
-
-      <!-- Editor -->
-      <app-text-editor
-        (activeLineChange)="onActiveLineChange($event)"
-        (contentChange)="onEditorChange($event)"
-        [lineIndexing]="selectedLineIndexing()"
-        #editor>
-      </app-text-editor>
-
-      <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
-    </div>
-
-
-    <!-- OUTPUT SECTION -->
-    <app-output-text
-      [outputText]="outputTextSignal()"
-      [selectedLineIndexing]="selectedLineIndexing"
-      [activeOutputLineIndex]="activeOutputLine()"
-      >
-    </app-output-text>
+    <app-text-editor
+      (activeLineChange)="onInputActiveLineChange($event)"
+      (contentChange)="onEditorChange($event)"
+      [lineIndexing]="selectedLineIndexing()"
+      #editor>
+    </app-text-editor>
+    <app-text-editor
+      (activeLineChange)="onOutputActiveLineChange($event)"
+      [editable]=false
+      #outputTextEditor>
+    </app-text-editor>
   </div>
   <div class="absolute bottom-2 left-0 w-full flex flex-row gap-2 justify-center z-50">
     @if (selectedConvertMethod() === 'manual') {

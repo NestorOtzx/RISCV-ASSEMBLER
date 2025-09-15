@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter, Input, computed } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter, Input } from '@angular/core';
 import { ensureFirstLineWrapped, getClosestDiv, placeCaretAtEnd, fixEmptyDivs } from './utils/dom-utils';
 import { extractContentAndLabels } from './utils/content-utils';
 import { handleNewLineIndent } from './utils/indent-utils';
@@ -18,6 +18,7 @@ import { isValidInstruction } from '../assembler/utils';
 })
 export class TextEditor implements AfterViewInit {
   @ViewChild('editor', { static: true }) editor!: ElementRef<HTMLDivElement>;
+  
   private _lineIndexing: 'numbers' | 'direction' = 'numbers';
 
   @Input()
@@ -28,10 +29,7 @@ export class TextEditor implements AfterViewInit {
     this.updateLineCounter(text);
   }
 
-  get lineIndexing(): 'numbers' | 'direction' {
-    return this._lineIndexing;
-  }
-
+  @Input() editable: boolean = true;
   @Output() contentChange = new EventEmitter<string>();
   @Output() activeLineChange = new EventEmitter<number>();
 
@@ -41,6 +39,10 @@ export class TextEditor implements AfterViewInit {
   private tooltip!: TooltipManager;
 
   constructor(private elementRef: ElementRef) {}
+
+  get lineIndexing(): 'numbers' | 'direction' {
+    return this._lineIndexing;
+  }
 
   ngAfterViewInit() {
     const editorEl = this.editor.nativeElement;
@@ -136,6 +138,7 @@ export class TextEditor implements AfterViewInit {
   }
 
   async paste() {
+    if (!this.editable) return;
     const text = await navigator.clipboard.readText();
     if (text) {
       handlePaste(
@@ -151,6 +154,7 @@ export class TextEditor implements AfterViewInit {
   }
 
   delete() {
+    if (!this.editable) return;
     deleteAll(
       this.editor.nativeElement,
       this.history,
@@ -162,15 +166,18 @@ export class TextEditor implements AfterViewInit {
   }
 
   undo() {
+    if (!this.editable) return;
     undo(this.history, (html) => this.restoreContent(html));
   }
 
   redo() {
+    if (!this.editable) return;
     redo(this.history, (html) => this.restoreContent(html));
   }
 
 
   private restoreContent(html: string) {
+    if (!this.editable) return;
     this.editor.nativeElement.innerHTML = html;
     ensureFirstLineWrapped(this.editor.nativeElement);
     fixEmptyDivs(this.editor.nativeElement);
@@ -182,6 +189,7 @@ export class TextEditor implements AfterViewInit {
 
 
   private insertTextAtCursor(text: string) {
+    if (!this.editable) return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
@@ -194,8 +202,6 @@ export class TextEditor implements AfterViewInit {
     sel.addRange(range);
   }
 
-
-  // aplica clases active/unactive
   private highlightActiveLine() {
     const selection = window.getSelection();
     if (!selection) return;
@@ -218,6 +224,33 @@ export class TextEditor implements AfterViewInit {
       this.activeLineChange.emit(activeIndex); 
     }
   }
+
+  public setActiveLineByIndex(lineIndex: number) {
+    const editorEl = this.editor.nativeElement;
+    const divs = Array.from(editorEl.querySelectorAll('div'));
+
+    // Si no hay líneas o el índice no existe → limpiar todas las clases
+    if (lineIndex < 0 || lineIndex >= divs.length) {
+      divs.forEach(div => {
+        div.classList.remove('active-line', 'unactive-line');
+        div.classList.add('unactive-line');
+      });
+      return;
+    }
+
+    const lineDiv = divs[lineIndex];
+
+    divs.forEach(div => {
+      div.classList.remove('active-line', 'unactive-line');
+      if (div === lineDiv) {
+        div.classList.add('active-line');
+      } else {
+        div.classList.add('unactive-line');
+      }
+    });
+  }
+
+
 
   markLineAsWrong(lineNumber: number, errorMessage?: string) {
     const editorEl = this.editor.nativeElement;
@@ -251,8 +284,9 @@ export class TextEditor implements AfterViewInit {
     (labels);
     this.history.push(editorEl.innerHTML);
     
-    placeCaretAtEnd(editorEl);
     this.highlightActiveLine();
+    if (!this.editable) { return; }
+    placeCaretAtEnd(editorEl);
   }
 
   emit(textin:string, labelsin:{name:string,line:number}[])

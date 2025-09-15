@@ -3,21 +3,19 @@ import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from './text-editor/text-editor';
 import { saveAs } from 'file-saver';
-import { OutputText } from './output-text/output-text';
 import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion,  } from './assembler/translator';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, FormsModule, TextEditor, OutputText],
+  imports: [RouterOutlet, FormsModule, TextEditor],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
   inputText = signal('');
-  activeLine = signal(0);
-  activeOutputLine = signal(-1);
-  outputTextSignal = signal('');
+  inputActiveLine = signal(0);
+  outputActiveLine = signal(-1);
 
   selectedInputFormat = signal<'riscv' | 'binary' | 'hexadecimal'>('riscv');
   previousInputFormat = 'riscv'
@@ -28,6 +26,7 @@ export class App {
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('outputScrollContainer') outputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('editor') editor!: TextEditor;
+  @ViewChild('outputTextEditor') outputTextEditor!: TextEditor;
 
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
@@ -38,7 +37,7 @@ export class App {
     
     if (result != null)
     {
-      this.outputTextSignal.set(result.output.join('\n'));
+      this.outputTextEditor.setContent(result.output.join('\n'));
       this.compiled.set(result);
       this.updateEditorMarks();
     }
@@ -71,8 +70,6 @@ export class App {
     return result;
   }
 
-
-
   get outputText(): string {
     return this.compiled()?.output.join('\n') ?? '';
   }
@@ -95,12 +92,13 @@ export class App {
 
   // Línea activa → output
   updateActiveOutputLine() {
-    const editorLine = this.activeLine();
-    const mapping = this.compiled()?.lineMapping;
+    const editorLine = this.inputActiveLine();
+    const mapping = this.compiled()?.editorToOutput;
     if (mapping)
     {
       const outputLine = mapping[editorLine] ?? -1;
-      this.activeOutputLine.set(outputLine);
+      this.outputActiveLine.set(outputLine);
+      this.outputTextEditor.setActiveLineByIndex(outputLine);
     }
   }
 
@@ -115,9 +113,17 @@ export class App {
   }
 
 
-  onActiveLineChange(line: number) {
-    this.activeLine.set(line);
+  onInputActiveLineChange(line: number) {
+    console.log("input active line changed to", line);
+    this.inputActiveLine.set(line);
     this.updateActiveOutputLine();
+  }
+
+  onOutputActiveLineChange(line: number) {
+    console.log("output active line changed to", line);
+
+    this.outputActiveLine.set(line);
+    this.editor.setActiveLineByIndex(this.compiled()?.outputToEditor[line] ?? -1)
   }
 
   
@@ -171,7 +177,7 @@ export class App {
   downloadOutput() {
     const format = this.selectedOutputFormat();
     let extension = 'txt';
-    const blob = new Blob([this.outputTextSignal()], { type: 'text/plain;charset=utf-8' });
-    saveAs(blob, `output.${extension}`);
+    //const blob = new Blob([this.outputTextSignal()], { type: 'text/plain;charset=utf-8' });
+    //saveAs(blob, `output.${extension}`);
   }
 }
