@@ -6,7 +6,7 @@ import { HistoryManager } from './utils/history-manager';
 import { TooltipManager } from './utils/tooltip-manager';
 import { highlightText } from './utils/highlight-utils';
 import { copy, handlePaste, deleteAll, undo, redo } from './utils/editor-actions';
-import { isValidRISCVInstruction } from '../assembler/utils';
+import { isValidBinaryInstruction, isValidHexInstruction, isValidRISCVInstruction } from '../assembler/utils';
 
 
 
@@ -330,13 +330,20 @@ export class TextEditor implements AfterViewInit {
       }else if (this._textFormat == "binary")
       {
         //todo: check if valid binary line
-        result.push(this.getLineIndex(lineNumber));
-        lineNumber++;
+        if (clean.length > 0 && isValidBinaryInstruction(clean)) {
+          result.push(this.getLineIndex(lineNumber));
+          lineNumber++;
+        } else {
+          result.push('\u00A0'); // espacio si no es válida
+        }
       }else if (this._textFormat == "hexadecimal")
       {
-        //todo: check if valid hexadecimal line
-        result.push(this.getLineIndex(lineNumber));
-        lineNumber++;
+        if (clean.length > 0 && isValidHexInstruction(clean)) {
+          result.push(this.getLineIndex(lineNumber));
+          lineNumber++;
+        } else {
+          result.push('\u00A0'); // espacio si no es válida
+        }
       }else{
         if (clean.length > 0 && isValidRISCVInstruction(clean)) {
           result.push(this.getLineIndex(lineNumber));
