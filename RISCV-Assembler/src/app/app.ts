@@ -18,8 +18,8 @@ export class App {
   outputActiveLine = signal(-1);
 
   selectedInputFormat = signal<'riscv' | 'binary' | 'hexadecimal'>('riscv');
-  previousInputFormat = 'riscv'
   selectedOutputFormat = signal<'binary' | 'hexadecimal' | 'riscv'>('binary');
+  previousInputFormat = 'riscv'
   selectedLineIndexing = signal<'numbers' | 'direction'>('numbers');
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -45,7 +45,7 @@ export class App {
 
   convertTextToFormat(lines: string[], from_format: string, to_format: string): TranslationResult | null
   {
-    console.log("convert text to format");
+    console.log("convert text to format from:"+from_format + " to: "+to_format);
     let result: TranslationResult | null;
     if (from_format == 'binary' && to_format == 'riscv')
     {
@@ -148,6 +148,7 @@ export class App {
 
 
   onInputFormatChange(event: Event) {
+    this.selectedInputFormat.set((event.target as HTMLSelectElement).value as any);
     const prev = this.previousInputFormat;
     const current = (event.target as HTMLSelectElement).value as any;
     this.updateInputFormats(prev, current);
@@ -158,6 +159,7 @@ export class App {
     console.log("input format change "+prev + " "+ current);
     if (prev !== current) {
       this.editor.setContent(this.convertTextToFormat(this.inputText().split('\n'), prev, current)?.output.join('\n')||'')
+      
       this.convertInputToOutput();
     }
   }

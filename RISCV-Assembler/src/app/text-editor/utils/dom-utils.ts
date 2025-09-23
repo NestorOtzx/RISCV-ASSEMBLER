@@ -10,6 +10,7 @@ export function getClosestDiv(node: Node | null, editorEl: HTMLElement): HTMLDiv
 export function ensureFirstLineWrapped(editorEl: HTMLElement) {
   if (editorEl.childNodes.length === 0) {
     const div = document.createElement('div');
+    div.classList.add('unactive-line');
     div.innerHTML = '<br>';
     editorEl.appendChild(div);
     return;

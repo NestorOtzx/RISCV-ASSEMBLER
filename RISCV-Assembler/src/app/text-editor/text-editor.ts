@@ -6,7 +6,7 @@ import { HistoryManager } from './utils/history-manager';
 import { TooltipManager } from './utils/tooltip-manager';
 import { highlightText } from './utils/highlight-utils';
 import { copy, handlePaste, deleteAll, undo, redo } from './utils/editor-actions';
-import { isValidInstruction } from '../assembler/utils';
+import { isValidRISCVInstruction } from '../assembler/utils';
 
 
 
@@ -20,6 +20,7 @@ export class TextEditor implements AfterViewInit {
   @ViewChild('editor', { static: true }) editor!: ElementRef<HTMLDivElement>;
   
   private _lineIndexing: 'numbers' | 'direction' = 'numbers';
+  private _textFormat: 'riscv' | 'binary' | 'hexadecimal' | 'text' = 'text';
 
   @Input()
   set lineIndexing(value: 'numbers' | 'direction') {
@@ -28,8 +29,18 @@ export class TextEditor implements AfterViewInit {
     const { text } = extractContentAndLabels(this.editor.nativeElement);
     this.updateLineCounter(text);
   }
+  @Input()
+  set textFormat(value: 'riscv' | 'binary' | 'hexadecimal' | 'text') {
+    this._textFormat = value;
+    // recalcula inmediatamente cuando cambia
+    if (this.editor) {
+      const { text } = extractContentAndLabels(this.editor.nativeElement);
+      this.updateLineCounter(text);
+    }
+  }
 
   @Input() editable: boolean = true;
+
   @Output() contentChange = new EventEmitter<string>();
   @Output() activeLineChange = new EventEmitter<number>();
 
@@ -271,10 +282,15 @@ export class TextEditor implements AfterViewInit {
   }
 
   setContent(text: string) {
+    if (this.editable)
+    {
+      console.log("Set content ");
+    }
     const editorEl = this.editor.nativeElement;
     editorEl.innerHTML = '';
     text.split(/\r?\n/).forEach(line => {
       const div = document.createElement('div');
+      div.classList.add('unactive-line');
       if (line === '') div.innerHTML = '<br>';
       else div.textContent = line;
       editorEl.appendChild(div);
@@ -291,6 +307,7 @@ export class TextEditor implements AfterViewInit {
 
   emit(textin:string, labelsin:{name:string,line:number}[])
   {
+    
     this.contentChange.emit(textin);
     const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
     this.updateLineCounter(text);
@@ -300,15 +317,33 @@ export class TextEditor implements AfterViewInit {
   private updateLineCounter(text: string) {
     const rawLines = text.split('\n');
     const result: string[] = [];
-
+    if (this.editable)
+    {
+      console.log("update line counter!"+this._textFormat + text);
+    }
     let lineNumber = 1;
     for (const raw of rawLines) {
       const clean = raw.trim();
-      if (clean.length > 0 && isValidInstruction(clean)) {
+      if (this._textFormat == "text"){
         result.push(this.getLineIndex(lineNumber));
         lineNumber++;
-      } else {
-        result.push('\u00A0'); // espacio si no es válida
+      }else if (this._textFormat == "binary")
+      {
+        //todo: check if valid binary line
+        result.push(this.getLineIndex(lineNumber));
+        lineNumber++;
+      }else if (this._textFormat == "hexadecimal")
+      {
+        //todo: check if valid hexadecimal line
+        result.push(this.getLineIndex(lineNumber));
+        lineNumber++;
+      }else{
+        if (clean.length > 0 && isValidRISCVInstruction(clean)) {
+          result.push(this.getLineIndex(lineNumber));
+          lineNumber++;
+        } else {
+          result.push('\u00A0'); // espacio si no es válida
+        }
       }
     }
 

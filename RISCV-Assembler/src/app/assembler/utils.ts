@@ -29,7 +29,7 @@ export function parseImmediate(token: string): number {
   return 0;
 }
 
-export function isValidInstruction(line: string): boolean {
+export function isValidRISCVInstruction(line: string): boolean {
   if (!line) return false;
 
   const tokens = line.split(/[\s,()]+/);
