@@ -46,34 +46,35 @@ export function isValidRISCVInstruction(line: string): boolean {
   );
 }
 
-function getAllOpcodes(): Set<string> {
-  const all = [
-    ...Object.values(rInstructions),
-    ...Object.values(iInstructions),
-    ...Object.values(sInstructions),
-    ...Object.values(bInstructions),
-    ...Object.values(jInstructions),
-    ...Object.values(uInstructions),
-    ...Object.values(specialIInstructions),
-  ];
-  return new Set(all.map(inst => inst.opcode));
+const allOpcodes = new Set<string>([
+  ...Object.values(rInstructions).map(i => i.opcode),
+  ...Object.values(iInstructions).map(i => i.opcode),
+  ...Object.values(sInstructions).map(i => i.opcode),
+  ...Object.values(bInstructions).map(i => i.opcode),
+  ...Object.values(jInstructions).map(i => i.opcode),
+  ...Object.values(uInstructions).map(i => i.opcode),
+  ...Object.values(specialIInstructions).map(i => i.opcode)
+]);
+
+// --- Binario ---
+export function isValidBinaryInstruction(bin: string): boolean {
+  if (!bin) return false;
+  const clean = bin.replace(/[^01]/g, ''); // solo bits
+  if (clean.length === 0) return false;
+
+  // Tomamos hasta los últimos 7 bits
+  const candidate = clean.slice(-7).padStart(7, '0');
+  return allOpcodes.has(candidate);
 }
 
-const validOpcodes = getAllOpcodes();
+// --- Hexadecimal ---
+export function isValidHexInstruction(hex: string): boolean {
+  if (!hex) return false;
+  const clean = hex.replace(/[^0-9a-fA-F]/g, '');
+  if (clean.length === 0) return false;
 
-export function isValidBinaryInstruction(line: string): boolean {
-  if (!line) return false;
-  const clean = line.trim().replace(/\s+/g, '');
-  if (!/^[01]+$/.test(clean)) return false; // debe ser solo 0/1
-  const opcode = clean.slice(-7); // últimos 7 bits
-  return validOpcodes.has(opcode);
-}
-
-export function isValidHexInstruction(line: string): boolean {
-  if (!line) return false;
-  const clean = line.trim().toLowerCase();
-  if (!/^0x[0-9a-f]+$/.test(clean)) return false;
-  const binary = parseInt(clean, 16).toString(2);
-  const opcode = binary.slice(-7).padStart(7, '0'); // últimos 7 bits
-  return validOpcodes.has(opcode);
+  // Convertimos a binario
+  const bin = parseInt(clean, 16).toString(2);
+  const candidate = bin.slice(-7).padStart(7, '0');
+  return allOpcodes.has(candidate);
 }
