@@ -3,7 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from './text-editor/text-editor';
 import { saveAs } from 'file-saver';
-import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion,  } from './assembler/translator';
+import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion, BinaryToBinary, RiscVToRiscV, HexToHex,  } from './assembler/translator';
 
 @Component({
   selector: 'app-root',
@@ -47,7 +47,17 @@ export class App {
   {
     console.log("convert text to format from:"+from_format + " to: "+to_format);
     let result: TranslationResult | null;
-    if (from_format == 'binary' && to_format == 'riscv')
+    if (from_format == 'binary' && to_format == 'binary')
+    {
+      result = BinaryToBinary(lines);
+    }
+    else if (from_format == 'riscv' && to_format == 'riscv')
+    {
+      result = RiscVToRiscV(lines);
+    }else if (from_format == 'hexadecimal' && to_format == 'hexadecimal'){
+      result = HexToHex(lines);
+    }
+    else if (from_format == 'binary' && to_format == 'riscv')
     {
       result = BinaryToRiscV(lines);
     }

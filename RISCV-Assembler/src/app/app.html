@@ -52,6 +52,7 @@
     <app-text-editor
       (activeLineChange)="onOutputActiveLineChange($event)"
       [textFormat]="selectedOutputFormat()"
+      [lineIndexing]="selectedLineIndexing()"
       [editable]=false
       #outputTextEditor>
     </app-text-editor>
