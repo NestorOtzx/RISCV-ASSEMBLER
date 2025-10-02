@@ -11,6 +11,14 @@ export const rInstructions = {
   sra:  { funct3: '101', funct7: '0100000', opcode: '0110011' },
   slt:  { funct3: '010', funct7: '0000000', opcode: '0110011' },
   sltu: { funct3: '011', funct7: '0000000', opcode: '0110011' },
+  mul:     { funct3: '000', funct7: '0000001',  opcode: '0110011' },
+  mulh:    { funct3: '001', funct7: '0000001',  opcode: '0110011' },
+  mulhsu:  { funct3: '010', funct7: '0000001',  opcode: '0110011' },
+  mulhu:   { funct3: '011', funct7: '0000001',  opcode: '0110011' },
+  div:     { funct3: '100', funct7: '0000001',  opcode: '0110011' },
+  divu:    { funct3: '101', funct7: '0000001',  opcode: '0110011' },
+  rem:     { funct3: '110', funct7: '0000001',  opcode: '0110011' },
+  remu:    { funct3: '111', funct7: '0000001',  opcode: '0110011' },
 };
 
 export const iInstructions: { [key: string]: Instruction } = {
