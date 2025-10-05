@@ -1,10 +1,10 @@
-
 const path = require('path');
 
 process.env.CHROME_BIN =
   process.env.CHROME_BIN ||
-  'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe' ||
-  require('puppeteer').executablePath();
+  (process.platform === 'win32'
+    ? 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe'
+    : require('puppeteer').executablePath());
 
 module.exports = function (config) {
   config.set({
@@ -21,9 +21,9 @@ module.exports = function (config) {
 
     client: {
       jasmine: {
-        random: false, // desactiva orden aleatorio
+        random: false,
       },
-      clearContext: false, // deja visible el reporte en navegador
+      clearContext: false,
     },
 
     coverageReporter: {
@@ -37,13 +37,14 @@ module.exports = function (config) {
 
     reporters: ['progress', 'kjhtml'],
 
-    browsers: ['BraveHeadless'],
+    browsers: [process.env.CI ? 'ChromeHeadlessCI' : 'BraveHeadless'],
 
     customLaunchers: {
       BraveHeadless: {
         base: 'ChromeHeadless',
         flags: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
-        binary: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+        binary:
+          'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
       },
       ChromeHeadlessCI: {
         base: 'ChromeHeadless',
@@ -51,7 +52,7 @@ module.exports = function (config) {
       },
     },
 
-    singleRun: false,
+    singleRun: !!process.env.CI, // true en CI, false localmente
     restartOnFileChange: true,
   });
 };
