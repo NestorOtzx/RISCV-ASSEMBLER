@@ -5,6 +5,7 @@ import { assembleBTypeProgressive, decodeBTypeProgressive } from './encoders/b-t
 import { assembleSpecialITypeProgressive, decodeSpecialITypeProgressive} from './encoders/special-i-type';
 import { assembleUTypeProgressive, decodeUTypeProgressive } from './encoders/u-type';
 import { assembleJTypeProgressive, decodeJTypeProgressive } from './encoders/j-type';
+import { bInstructions, jInstructions } from './instruction-tables';
 
 export type TranslationResult = {
   output: string[];
@@ -15,16 +16,17 @@ export type TranslationResult = {
 };
 
   
-
 export function RiscVToBinary(lines: string[]): TranslationResult {
   const output: string[] = [];
   const labelMap: Record<string, number> = {};
+  const pendingBranches: { lineIndex: number; instruction: string }[] = [];
   const errors: { line: number; message: string }[] = [];
   const editorToOutput: number[] = [];
   const outputToEditor: number[] = [];
 
   let instructionAddress = 0;
 
+  // PRIMERA PASADA — construye labelMap y binarios iniciales
   lines.forEach((line, i) => {
     const trimmed = line.trim();
     if (!trimmed) {
@@ -32,6 +34,7 @@ export function RiscVToBinary(lines: string[]): TranslationResult {
       return;
     }
 
+    // Detecta y registra etiquetas
     const isLabel = /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
     if (isLabel) {
       const labelName = trimmed.replace(':', '');
@@ -44,11 +47,27 @@ export function RiscVToBinary(lines: string[]): TranslationResult {
       return;
     }
 
-    let binary =
+    // Analiza la instrucción
+    const tokens = trimmed.split(/[\s,()]+/);
+    const mnemonic = tokens[0];
+
+    // Las tipo B tienen el label en tokens[3], las tipo J en tokens[2]
+    const target = tokens[3] ?? tokens[2];
+
+    // Si es B-type o J-type con posible etiqueta, la dejamos pendiente
+    const isBType = mnemonic in bInstructions;
+    const isJType = mnemonic in jInstructions;
+
+    if ((isBType || isJType) && target && isNaN(Number(target))) {
+      pendingBranches.push({ lineIndex: i, instruction: trimmed });
+    }
+
+    // Ensambla provisionalmente (sin labels)
+    const binary =
       assembleRTypeProgressive(trimmed) ||
       assembleITypeProgressive(trimmed) ||
       assembleSTypeProgressive(trimmed) ||
-      assembleBTypeProgressive(trimmed) ||
+      assembleBTypeProgressive(trimmed) || // provisional
       assembleSpecialITypeProgressive(trimmed) ||
       assembleUTypeProgressive(trimmed) ||
       assembleJTypeProgressive(trimmed);
@@ -59,15 +78,44 @@ export function RiscVToBinary(lines: string[]): TranslationResult {
       return;
     }
 
-    instructionAddress++;
     output.push(binary);
-    editorToOutput.push(output.length - 1);   // editor → output
-    outputToEditor.push(i);                   // output → editor
+    editorToOutput.push(output.length - 1);
+    outputToEditor.push(i);
+    instructionAddress++;
   });
+
+  // SEGUNDA ETAPA — reensambla las tipo B y tipo J pendientes
+  for (const { lineIndex, instruction } of pendingBranches) {
+    const tokens = instruction.split(/[\s,()]+/);
+    const mnemonic = tokens[0];
+    const target = tokens[3] ?? tokens[2];
+    const outputIndex = editorToOutput[lineIndex];
+
+    if (outputIndex < 0 || outputIndex === undefined) continue;
+
+    if (!labelMap.hasOwnProperty(target)) {
+      errors.push({ line: lineIndex + 1, message: `Undefined label "${target}"` });
+      continue;
+    }
+
+    let resolved: string | null = null;
+
+    if (mnemonic in bInstructions) {
+      resolved = assembleBTypeProgressive(instruction, labelMap, outputIndex);
+    } else if (mnemonic in jInstructions) {
+      resolved = assembleJTypeProgressive(instruction, labelMap, outputIndex);
+    }
+
+    if (!resolved) {
+      errors.push({ line: lineIndex + 1, message: 'Could not resolve label' });
+      continue;
+    }
+
+    output[outputIndex] = resolved;
+  }
 
   return { output, labelMap, errors, editorToOutput, outputToEditor };
 }
-
 
 
 export function BinaryToRiscV(lines: string[]): TranslationResult {

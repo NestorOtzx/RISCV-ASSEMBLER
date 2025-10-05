@@ -56,7 +56,6 @@ const allOpcodes = new Set<string>([
   ...Object.values(specialIInstructions).map(i => i.opcode)
 ]);
 
-// --- Binario ---
 export function isValidBinaryInstruction(bin: string): boolean {
   if (!bin) return false;
   const clean = bin.replace(/[^01]/g, ''); // solo bits
@@ -67,13 +66,11 @@ export function isValidBinaryInstruction(bin: string): boolean {
   return allOpcodes.has(candidate);
 }
 
-// --- Hexadecimal ---
 export function isValidHexInstruction(hex: string): boolean {
   if (!hex) return false;
   const clean = hex.replace(/[^0-9a-fA-F]/g, '');
   if (clean.length === 0) return false;
 
-  // Convertimos a binario
   const bin = parseInt(clean, 16).toString(2);
   const candidate = bin.slice(-7).padStart(7, '0');
   return allOpcodes.has(candidate);

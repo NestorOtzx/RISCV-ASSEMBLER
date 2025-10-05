@@ -311,7 +311,7 @@ export class TextEditor implements AfterViewInit {
     this.contentChange.emit(textin);
     const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
     this.updateLineCounter(text);
-    highlightText(this.editor.nativeElement, labels);
+    highlightText(this.editor.nativeElement, labels, this._textFormat);
   }
 
   private updateLineCounter(text: string) {

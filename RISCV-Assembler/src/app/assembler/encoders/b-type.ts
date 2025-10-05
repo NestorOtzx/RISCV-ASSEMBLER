@@ -1,7 +1,12 @@
 import { bInstructions } from '../instruction-tables';
 import { registerToBinary, parseImmediate} from '../utils';
 
-export function assembleBTypeProgressive(instruction: string): string | null {
+
+export function assembleBTypeProgressive(
+  instruction: string,
+  labelMap?: Record<string, number>,
+  currentAddress?: number
+): string | null {
   const tokens = instruction.trim().split(/[\s,()]+/);
   const mnemonic = tokens[0];
   const instrData = bInstructions[mnemonic as keyof typeof bInstructions];
@@ -9,10 +14,25 @@ export function assembleBTypeProgressive(instruction: string): string | null {
 
   const rs1Bin = registerToBinary(tokens[1]);
   const rs2Bin = registerToBinary(tokens[2]);
+
+  // Si nos pasaron labelMap y currentAddress, y el token 3 es una etiqueta conocida,
+  // lo convertimos a desplazamiento en bytes tal como si el usuario hubiera escrito -4, 8, etc.
+  if (labelMap && currentAddress !== undefined) {
+    const target = tokens[3];
+    if (target && !/^[-+]?\d+$/.test(target) && !/^0x/i.test(target)) {
+      if (labelMap.hasOwnProperty(target)) {
+        const labelAddress = labelMap[target]; // índice de instrucción
+        // diferencia en bytes entre destino y la instrucción actual:
+        const byteOffset = (labelAddress - currentAddress) * 4;
+        tokens[3] = byteOffset.toString();
+      }
+    }
+  }
+
   const immVal = tokens[3] !== undefined ? parseImmediate(tokens[3]) : 0;
 
-  const imm = (immVal >> 1) & 0xFFF;  // Offsets are multiples of 2
-  const immBin = imm.toString(2).padStart(12, (imm & 0x800) ? '1' : '0'); // Sign extension
+  const imm = (immVal >> 1) & 0xFFF;  // Offsets are multiples of 2 (>>1) and keep 12 bits
+  const immBin = imm.toString(2).padStart(12, (imm & 0x800) ? '1' : '0'); // sign bits if needed
 
   const imm12   = immBin[0] || '0';
   const imm10_5 = immBin.slice(1, 7).padEnd(6, '0');
@@ -21,6 +41,7 @@ export function assembleBTypeProgressive(instruction: string): string | null {
 
   return `${imm12}${imm10_5}${rs2Bin}${rs1Bin}${instrData.funct3}${imm4_1}${imm11}${instrData.opcode}`.slice(-32);
 }
+
 
 export function decodeBTypeProgressive(binary: string): string | null {
   if (!binary || binary.length === 0) return null;
