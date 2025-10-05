@@ -33,4 +33,5 @@ jobs:
 
       - name: Run unit tests
         run: |
+          cd RISCV-ASSEMBLER
           npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI
