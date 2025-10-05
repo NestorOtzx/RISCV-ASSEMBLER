@@ -20,10 +20,11 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        working-directory: ./RISCV-Assembler
-        run: npm ci
+        run: |
+          cd RISCV-ASSEMBLER
+          npm ci
 
-      - name: Install Chromium (for Karma)
+      - name: Install Chromium
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser
@@ -31,4 +32,6 @@ jobs:
           echo "CHROME_BIN is $CHROME_BIN"
 
       - name: Run unit tests
-        run: npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI
+        run: |
+          cd RISCV-ASSEMBLER
+          npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI
