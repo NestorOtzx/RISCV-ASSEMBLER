@@ -1,3 +1,4 @@
+import { ConstantPool } from '@angular/compiler';
 import { bInstructions } from '../instruction-tables';
 import { registerToBinary, parseImmediate} from '../utils';
 
@@ -33,7 +34,7 @@ export function assembleBTypeProgressive(
 
   const imm = (immVal >> 1) & 0xFFF;  // Offsets are multiples of 2 (>>1) and keep 12 bits
   const immBin = imm.toString(2).padStart(12, (imm & 0x800) ? '1' : '0'); // sign bits if needed
-
+  console.log("imBin:"+immBin);
   const imm12   = immBin[0] || '0';
   const imm10_5 = immBin.slice(1, 7).padEnd(6, '0');
   const imm4_1  = immBin.slice(7, 11).padEnd(4, '0');

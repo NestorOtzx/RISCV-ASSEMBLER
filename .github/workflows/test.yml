@@ -1,0 +1,39 @@
+name: Angular Tests
+
+on:
+  push:
+    branches: [ develop, main, feature-* ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Move to Angular project directory
+        working-directory: ./RISCV-Assembler
+        run: echo "Changed directory to RISCV-Assembler"
+
+      - name: Install dependencies
+        working-directory: ./RISCV-Assembler
+        run: npm ci
+
+      - name: Install Chromium (for Karma)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+          export CHROME_BIN=$(which chromium-browser)
+          echo "CHROME_BIN is $CHROME_BIN"
+
+      - name: Run unit tests
+        working-directory: ./RISCV-Assembler
+        run: npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI
