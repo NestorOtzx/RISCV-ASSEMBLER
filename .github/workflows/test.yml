@@ -24,7 +24,6 @@ jobs:
         run: echo "Changed directory to RISCV-Assembler"
 
       - name: Install dependencies
-        working-directory: ./RISCV-Assembler
         run: npm ci
 
       - name: Install Chromium (for Karma)
@@ -35,5 +34,4 @@ jobs:
           echo "CHROME_BIN is $CHROME_BIN"
 
       - name: Run unit tests
-        working-directory: ./RISCV-Assembler
         run: npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI
