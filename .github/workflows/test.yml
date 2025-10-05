@@ -31,5 +31,4 @@ jobs:
           echo "CHROME_BIN is $CHROME_BIN"
 
       - name: Run unit tests
-        working-directory: ./RISCV-Assembler
         run: npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI
