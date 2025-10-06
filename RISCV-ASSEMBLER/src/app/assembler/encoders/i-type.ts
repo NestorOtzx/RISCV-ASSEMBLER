@@ -50,17 +50,50 @@ export function decodeITypeProgressive(binary: string): string | null {
   const rs1Bin = padded.slice(12, 17);
   const immBin = padded.slice(0, 12);
 
-  // Buscar instrucción que coincida exactamente con opcode y funct3 (si existe)
-  const entry = Object.entries(iInstructions).find(
-    ([, data]) => data.opcode === opcode && (!data.funct3 || data.funct3 === funct3)
+  const funct7 = immBin.slice(0, 7);
+  const shamtBin = immBin.slice(7, 12);
+
+  // 🔹 Buscar coincidencia exacta con opcode + funct3 + funct7 (si aplica)
+  let entry = Object.entries(iInstructions).find(
+    ([, data]) =>
+      data.opcode === opcode &&
+      (!data.funct3 || data.funct3 === funct3) &&
+      (!data.funct7 || data.funct7 === funct7)
   );
 
-  if (!entry) return null; // No se pudo decodificar
+  // 🔸 Si no encontramos por funct7, relajamos la búsqueda
+  if (!entry) {
+    entry = Object.entries(iInstructions).find(
+      ([, data]) => data.opcode === opcode && data.funct3 === funct3
+    );
+  }
+
+  if (!entry) return null;
 
   const mnemonic = entry[0];
-  const rd = rdBin ? `x${parseInt(rdBin, 2)}` : '';
-  const rs1 = rs1Bin ? `x${parseInt(rs1Bin, 2)}` : '';
-  const imm = immBin ? parseInt(immBin, 2) : 0;
+  const rd = `x${parseInt(rdBin, 2)}`;
+  const rs1 = `x${parseInt(rs1Bin, 2)}`;
 
-  return `${mnemonic} ${rd} ${rs1} ${imm}`.trim();
+  let imm: number;
+
+  if (mnemonic === 'slli' || mnemonic === 'srli' || mnemonic === 'srai') {
+    // Desplazamientos: el inmediato son los bits [7–11]
+    imm = parseInt(shamtBin, 2);
+  } else {
+    // Inmediato de 12 bits con signo
+    const rawImm = parseInt(immBin, 2);
+    imm = immBin[0] === '1' ? rawImm - 0x1000 : rawImm;
+  }
+
+  // 🔹 Detección de instrucciones tipo carga (usan imm(rs1))
+  const isLoad =
+    mnemonic.startsWith('l') && // lw, lb, lh, lbu, lhu
+    opcode === '0000011';
+
+  if (isLoad) {
+    return `${mnemonic} ${rd}, ${imm}(${rs1})`;
+  }
+
+  // 🔹 Resto de instrucciones tipo I (usan rd, rs1, imm)
+  return `${mnemonic} ${rd}, ${rs1}, ${imm}`;
 }

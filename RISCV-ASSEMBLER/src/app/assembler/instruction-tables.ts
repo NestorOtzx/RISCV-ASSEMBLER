@@ -68,6 +68,4 @@ export const uInstructions = {
 
 export const specialIInstructions = {
   jalr:   { funct3: '000', opcode: '1100111' },
-  ecall:  { opcode: '1110011' },
-  ebreak: { opcode: '1110011' },
 };

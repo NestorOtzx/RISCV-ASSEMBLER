@@ -1,5 +1,5 @@
 import { jInstructions } from '../instruction-tables';
-import { registerToBinary,  encodeImmediate12Bits, parseImmediate} from '../utils';
+import { registerToBinary, parseImmediate } from '../utils';
 
 export function assembleJTypeProgressive(
   instruction: string,
@@ -16,51 +16,57 @@ export function assembleJTypeProgressive(
 
   let immVal = 0;
 
-  // Si el target es una etiqueta y tenemos un labelMap válido, resolvemos
   const isNumeric = /^[-+]?\d+$/.test(target) || /^0x[0-9a-fA-F]+$/.test(target);
   if (!isNumeric && labelMap && currentAddress !== undefined) {
-    if (!labelMap.hasOwnProperty(target)) {
-      // Etiqueta no definida
-      return null;
-    }
+    if (!labelMap.hasOwnProperty(target)) return null;
     const targetAddress = labelMap[target];
-    immVal = (targetAddress - currentAddress) * 4; // offset relativo en bytes
+    immVal = targetAddress - currentAddress;
   } else {
-    // Numérico: inmediato directo
     immVal = parseImmediate(target);
   }
 
-  // Offsets son múltiplos de 2
-  const imm = (immVal >> 1) & 0xFFFFF;
-  const immBin = imm.toString(2).padStart(20, (imm & 0x80000) ? '1' : '0');
+  // Convertimos a binario con signo (21 bits, incluye el bit de signo)
+  const immBin = (immVal & 0x1FFFFF).toString(2).padStart(21, immVal < 0 ? '1' : '0');
 
-  const imm20 = immBin[0] || '0';
-  const imm19_12 = immBin.slice(1, 9).padEnd(8, '0');
-  const imm11 = immBin[9] || '0';
-  const imm10_1 = immBin.slice(10).padEnd(10, '0');
+  // Partes del inmediato (numeradas de 0 a 20, bit 20 = MSB)
+  const imm20 = immBin[0];              // bit 20
+  const imm19_12 = immBin.slice(1, 9);  // bits 19–12
+  const imm11 = immBin[9];              // bit 11
+  const imm10_1 = immBin.slice(10, 20); // bits 10–1
 
-  return `${imm20}${imm19_12}${imm11}${imm10_1}${rdBin}${jInstructions.jal.opcode}`.slice(-32);
+  // Concatenación según formato JAL: 20|10:1|11|19:12
+  const finalBin =
+    imm20 +
+    imm10_1 +
+    imm11 +
+    imm19_12 +
+    rdBin +
+    jInstructions.jal.opcode;
+
+  // ✅ Esto ahora produce 11111101100111111111000011101111 para jal x1, -40
+  return finalBin.padStart(32, immVal < 0 ? '1' : '0');
 }
 
 export function decodeJTypeProgressive(binary: string): string | null {
-  if (!binary || binary.length === 0) return null;
+  if (!binary || binary.length < 32) return null;
   const padded = binary.padStart(32, '0');
 
   const opcode = padded.slice(-7);
-
-  // Solo decodificar si es jal (opcode 1101111)
   if (opcode !== jInstructions.jal.opcode) return null;
 
   const rdBin = padded.slice(20, 25);
-  const imm20 = padded[0] || '0';
-  const imm10_1 = padded.slice(21, 31).padEnd(10, '0');
-  const imm11 = padded[31] || '0';
-  const imm19_12 = padded.slice(1, 9).padEnd(8, '0');
 
+  // Extraer según formato: 20|10:1|11|19:12
+  const imm20 = padded[0];
+  const imm10_1 = padded.slice(1, 11);
+  const imm11 = padded[11];
+  const imm19_12 = padded.slice(12, 20);
+
+  // Reconstruimos el inmediato lógico
   const immBin = imm20 + imm19_12 + imm11 + imm10_1 + '0';
-  const imm = parseInt(immBin, 2);
+  let imm = parseInt(immBin, 2);
+  if (immBin[0] === '1') imm -= 1 << 21; // signo
 
-  const rd = rdBin ? `x${parseInt(rdBin, 2)}` : '';
-
-  return `jal ${rd} ${imm}`.trim();
+  const rd = `x${parseInt(rdBin, 2)}`;
+  return `jal ${rd}, ${imm}`;
 }

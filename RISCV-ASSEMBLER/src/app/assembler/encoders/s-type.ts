@@ -51,6 +51,6 @@ export function decodeSTypeProgressive(binary: string): string | null {
   const rs1 = rs1Bin ? `x${parseInt(rs1Bin, 2)}` : '';
   const rs2 = rs2Bin ? `x${parseInt(rs2Bin, 2)}` : '';
 
-  return `${mnemonic} ${rs2} ${imm}(${rs1})`.trim();
+  return `${mnemonic} ${rs2}, ${imm}(${rs1})`.trim();
 }
 

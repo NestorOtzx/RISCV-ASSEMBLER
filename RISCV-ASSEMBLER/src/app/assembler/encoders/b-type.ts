@@ -32,15 +32,14 @@ export function assembleBTypeProgressive(
 
   const immVal = tokens[3] !== undefined ? parseImmediate(tokens[3]) : 0;
 
-  const imm = (immVal >> 1) & 0xFFF;  // Offsets are multiples of 2 (>>1) and keep 12 bits
-  const immBin = imm.toString(2).padStart(12, (imm & 0x800) ? '1' : '0'); // sign bits if needed
-  console.log("imBin:"+immBin);
-  const imm12   = immBin[0] || '0';
-  const imm10_5 = immBin.slice(1, 7).padEnd(6, '0');
-  const imm4_1  = immBin.slice(7, 11).padEnd(4, '0');
-  const imm11   = immBin[11] || '0';
-
+  const imm = immVal & 0x1FFF; 
+  const immBin = imm.toString(2).padStart(13, (immVal < 0 ? '1' : '0'));
+  const imm12  = immBin[0];              // bit 12
+  const imm10_5 = immBin.slice(2, 8);    // bits 10–5
+  const imm4_1  = immBin.slice(8, 12);   // bits 4–1
+  const imm11   = immBin[1];             // bit 11
   return `${imm12}${imm10_5}${rs2Bin}${rs1Bin}${instrData.funct3}${imm4_1}${imm11}${instrData.opcode}`.slice(-32);
+
 }
 
 
@@ -53,22 +52,28 @@ export function decodeBTypeProgressive(binary: string): string | null {
   const rs1Bin = padded.slice(12, 17);
   const rs2Bin = padded.slice(7, 12);
 
-  const imm12 = padded[0] || '0';
-  const imm10_5 = padded.slice(1, 7).padEnd(6, '0');
-  const imm4_1 = padded.slice(20, 24).padEnd(4, '0');
-  const imm11 = padded[24] || '0';
-  const immBin = imm12 + imm11 + imm10_5 + imm4_1 + '0';
-  const imm = parseInt(immBin, 2);
+  // Extraemos bits del inmediato en el orden correcto según el formato B-type
+  const imm12 = padded[0];                    // bit 12 (sign)
+  const imm10_5 = padded.slice(1, 7);         // bits 10:5
+  const imm4_1 = padded.slice(20, 24);        // bits 4:1
+  const imm11 = padded[24];                   // bit 11
+  const immBin = imm12 + imm11 + imm10_5 + imm4_1 + '0'; // se agrega el bit 0 (siempre 0)
+
+  // Interpretar como número con signo (13 bits)
+  let imm = parseInt(immBin, 2);
+  if (immBin[0] === '1') {
+    imm -= 1 << immBin.length; // complemento a dos
+  }
 
   const entry = Object.entries(bInstructions).find(
     ([, data]) => data.opcode === opcode && data.funct3 === funct3
   );
 
-  if (!entry) return null; 
+  if (!entry) return null;
 
   const mnemonic = entry[0];
-  const rs1 = rs1Bin ? `x${parseInt(rs1Bin, 2)}` : '';
-  const rs2 = rs2Bin ? `x${parseInt(rs2Bin, 2)}` : '';
+  const rs1 = `x${parseInt(rs1Bin, 2)}`;
+  const rs2 = `x${parseInt(rs2Bin, 2)}`;
 
-  return `${mnemonic} ${rs1} ${rs2} ${imm}`.trim();
+  return `${mnemonic} ${rs1}, ${rs2}, ${imm}`;
 }

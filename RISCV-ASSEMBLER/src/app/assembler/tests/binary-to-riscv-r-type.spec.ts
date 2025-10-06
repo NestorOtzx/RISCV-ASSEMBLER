@@ -1,6 +1,7 @@
-import { RiscVToBinary } from '../translator';
+import { BinaryToRiscV } from '../translator';
+import { normalizeRegisters } from './test-tools';
 
-describe('RiscVToBinary I-Type Instructions', () => {
+describe('BinaryToRiscV R-Type Instructions', () => {
   const cases = [
     ['addi x5, x6, 7', '00000000011100110000001010010011'],
     ['addi t0, t1, 5', '00000000010100110000001010010011'],
@@ -29,10 +30,12 @@ describe('RiscVToBinary I-Type Instructions', () => {
     ['lhu x5, 0(x6)', '00000000000000110101001010000011'],
     ['lhu s0, 20(s1)', '00000001010001001101010000000011']
   ];
-  for (const [instruction, expected] of cases) {
-    it(`encodes "${instruction}" correctly`, () => {
-      const result = RiscVToBinary([instruction]);
-      expect(result.output[0]).toBe(expected);
+
+  for (const [expectedInstruction, binary] of cases) {
+    it(`decodes "${binary}" correctly`, () => {
+      const result = BinaryToRiscV([binary]);
+      expect(normalizeRegisters(result.output[0]))
+        .toBe(normalizeRegisters(expectedInstruction));
       expect(result.errors.length).toBe(0);
     });
   }
