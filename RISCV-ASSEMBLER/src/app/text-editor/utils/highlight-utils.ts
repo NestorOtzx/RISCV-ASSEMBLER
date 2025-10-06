@@ -28,7 +28,7 @@ export interface Label {
   line: number;
 }
 
-export function highlightText(editorEl: HTMLElement, labels: Label[]) {
+export function highlightText(editorEl: HTMLElement, labels: Label[], textFormat: 'riscv' | 'binary' | 'hexadecimal' | 'text') {
   const selection = window.getSelection();
   let caretInfo: { divIndex: number; offset: number } | null = null;
   try {

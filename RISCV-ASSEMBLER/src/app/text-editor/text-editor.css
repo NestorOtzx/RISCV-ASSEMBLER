@@ -53,3 +53,4 @@
 :host  ::ng-deep .instr-j { color: #ba68c8; font-weight: bold; }     /* J-type */
 :host  ::ng-deep .instr-u { color: #ffd54f; font-weight: bold; }     /* U-type */
 :host  ::ng-deep .instr-special { color: #90a4ae; font-weight: bold; } /* especiales */
+:host  ::ng-deep .opcode-bin { color: #81c784; font-weight: bold; } /* especiales */

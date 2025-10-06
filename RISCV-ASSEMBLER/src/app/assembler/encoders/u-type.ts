@@ -9,7 +9,7 @@ export function assembleUTypeProgressive(instruction: string): string | null {
 
   const rdBin = registerToBinary(tokens[1]);
   const immVal = tokens[2] !== undefined ? parseImmediate(tokens[2]) : 0;
-  const immBin = (immVal >>> 12).toString(2).padStart(20, '0');
+  const immBin = (immVal).toString(2).padStart(20, '0');
 
   return `${immBin}${rdBin}${instrData.opcode}`.slice(-32);
 }
@@ -32,7 +32,7 @@ export function decodeUTypeProgressive(binary: string): string | null {
 
   const mnemonic = entry[0];
   const rd = rdBin ? `x${parseInt(rdBin, 2)}` : '';
-  const imm = parseInt(immBin + '000000000000', 2); // desplazamiento 12 bits
+  const imm = parseInt(immBin, 2); // desplazamiento 12 bits
 
-  return `${mnemonic} ${rd} ${imm}`.trim();
+  return `${mnemonic} ${rd}, ${imm}`.trim();
 }
