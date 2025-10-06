@@ -8,12 +8,66 @@ import {
   specialIInstructions 
 } from './instruction-tables';
 
+const REGISTER_ALIASES: Record<string, number> = {
+  zero: 0,
+  ra: 1,
+  sp: 2,
+  gp: 3,
+  tp: 4,
+  t0: 5,
+  t1: 6,
+  t2: 7,
+  s0: 8,
+  fp: 8,
+  s1: 9,
+  a0: 10,
+  a1: 11,
+  a2: 12,
+  a3: 13,
+  a4: 14,
+  a5: 15,
+  a6: 16,
+  a7: 17,
+  s2: 18,
+  s3: 19,
+  s4: 20,
+  s5: 21,
+  s6: 22,
+  s7: 23,
+  s8: 24,
+  s9: 25,
+  s10: 26,
+  s11: 27,
+  t3: 28,
+  t4: 29,
+  t5: 30,
+  t6: 31
+};
+
+
 export function registerToBinary(reg: string | undefined): string {
-  if (!reg || !reg.startsWith('x')) return '00000';
-  const regNum = parseInt(reg.slice(1));
-  if (isNaN(regNum) || regNum < 0 || regNum > 31) return '00000';
-  return regNum.toString(2).padStart(5, '0');
+  if (!reg) return '00000';
+
+  const normalized = reg.trim().toLowerCase();
+
+  // Caso 1: formato xN
+  if (normalized.startsWith('x')) {
+    const regNum = parseInt(normalized.slice(1));
+    if (!isNaN(regNum) && regNum >= 0 && regNum <= 31) {
+      return regNum.toString(2).padStart(5, '0');
+    }
+  }
+
+  // Caso 2: alias estándar (t0, s0, ra, etc.)
+  if (normalized in REGISTER_ALIASES) {
+    const regNum = REGISTER_ALIASES[normalized];
+    return regNum.toString(2).padStart(5, '0');
+  }
+
+  // Si no es válido, retorna 00000 (x0)
+  return '00000';
 }
+
 
 export function encodeImmediate12Bits(value: number): string {
   const maskedValue = value & 0xFFF;
