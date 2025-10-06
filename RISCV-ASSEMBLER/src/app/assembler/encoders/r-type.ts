@@ -40,7 +40,7 @@ export function decodeRTypeProgressive(binary: string): string | null {
   const rs1 = rs1Bin ? `x${parseInt(rs1Bin, 2)}` : '';
   const rs2 = rs2Bin ? `x${parseInt(rs2Bin, 2)}` : '';
 
-  return `${mnemonic} ${rd} ${rs1} ${rs2}`.trim();
+  return `${mnemonic} ${rd}, ${rs1}, ${rs2}`.trim();
 }
 
 
