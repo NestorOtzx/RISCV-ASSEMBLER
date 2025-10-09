@@ -34,7 +34,7 @@ module.exports = function (config) {
       ],
     },
 
-    reporters: ['progress', 'kjhtml'],
+    reporters: ['progress', 'kjhtml', 'coverage'],
 
     browsers: [process.env.CI ? 'ChromeHeadlessCI' : 'BraveHeadless'],
 

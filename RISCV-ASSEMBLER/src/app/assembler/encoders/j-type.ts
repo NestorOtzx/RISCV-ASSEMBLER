@@ -12,7 +12,7 @@ export function assembleJTypeProgressive(
 
   const rdBin = registerToBinary(tokens[1]);
   const target = tokens[2];
-  if (!target) return null;
+  if (!target){ return null;}
 
   let immVal = 0;
 

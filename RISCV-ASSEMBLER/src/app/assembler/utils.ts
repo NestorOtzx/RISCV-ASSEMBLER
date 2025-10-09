@@ -77,7 +77,7 @@ export function encodeImmediate12Bits(value: number): string {
 export function parseImmediate(token: string): number {
   if (token.startsWith('0x') || token.startsWith('0X')) {
     return parseInt(token, 16);
-  } else if (!isNaN(Number(token))) {
+  } else if (!isNaN(Number(token)) && token.length > 0) {
     return parseInt(token, 10);
   }
   return 0;

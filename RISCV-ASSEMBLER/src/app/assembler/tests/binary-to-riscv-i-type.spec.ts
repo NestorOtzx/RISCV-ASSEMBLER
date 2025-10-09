@@ -4,6 +4,7 @@ import { normalizeRegisters } from './test-tools';
 describe('BinaryToRiscV I-Type Instructions', () => {
   const cases = [
     ['addi x5, x6, 7', '00000000011100110000001010010011'],
+    ['addi x5, x6, -7', '11111111100100110000001010010011'],
     ['addi t0, t1, 5', '00000000010100110000001010010011'],
     ['slti x5, x6, 7', '00000000011100110010001010010011'],
     ['slti s0, s1, 10', '00000000101001001010010000010011'],
