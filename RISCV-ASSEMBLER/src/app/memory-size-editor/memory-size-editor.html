@@ -16,19 +16,32 @@
   <div class="flex-1 p-4 overflow-y-auto space-y-6">
 
     <!-- ===================== Configuración de Memoria ===================== -->
-    <div class="bg-slate-700 p-3 rounded-lg border border-slate-600">
-      <h3 class="font-semibold mb-2 text-gray-100">Tamaño total de memoria</h3>
-      <input
-        type="text"
-        [value]="toHex(memorySize)"
-        (change)="setMemorySizeFromHex($any($event.target).value)"
-        class="w-full bg-slate-800 text-gray-200 border border-slate-500 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500"
-      />
-      <p class="text-sm text-gray-400 mt-1">
-        Min: 0x{{ memoryConfig.minSize.toString(16) }},
-        Max: 0x{{ memoryConfig.maxSize.toString(16) }}
-      </p>
-    </div>
+<div class="bg-slate-700 p-3 rounded-lg border border-slate-600">
+  <h3 class="font-semibold mb-2 text-gray-100">Tamaño total de memoria</h3>
+
+  <div class="flex gap-2">
+    <input
+      type="number"
+      [value]="memorySizeInput"
+      (change)="onMemorySizeInputChange($any($event.target).value)"
+      class="w-full bg-slate-800 text-gray-200 border border-slate-500 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500"
+    />
+    <select
+      [(ngModel)]="memoryUnit"
+      (change)="onMemoryUnitChange()"
+      class="bg-slate-800 text-gray-200 border border-slate-500 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500">
+      <option value="KB">KB</option>
+      <option value="MB">MB</option>
+      <option value="GB">GB</option>
+    </select>
+  </div>
+
+  <p class="text-sm text-gray-400 mt-1">
+    Min: {{ formatSize(memoryConfig.minSize) }},
+    Max: {{ formatSize(memoryConfig.maxSize) }}
+  </p>
+</div>
+
 
     <!-- ===================== Mapa interactivo ===================== -->
     <div class="bg-slate-700 rounded-lg border border-slate-600 p-3">

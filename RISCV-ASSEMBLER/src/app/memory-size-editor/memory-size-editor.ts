@@ -27,6 +27,34 @@ export class MemorySizeEditor implements OnInit {
   };
 
   memorySize: number = this.memoryConfig.defaultSize;
+  memorySizeInput: number = 4; // valor inicial (4 GB)
+  memoryUnit: 'KB' | 'MB' | 'GB' = 'GB';
+
+  // ================= CONVERSIÓN DE UNIDADES =================
+  getBytesFromUnit(value: number, unit: string): number {
+    switch (unit) {
+      case 'KB': return value * 1024;
+      case 'MB': return value * 1024 * 1024;
+      case 'GB': return value * 1024 * 1024 * 1024;
+      default: return value;
+    }
+  }
+
+  getUnitFromBytes(bytes: number): { value: number, unit: string } {
+    if (bytes % (1024 ** 3) === 0) return { value: bytes / (1024 ** 3), unit: 'GB' };
+    if (bytes % (1024 ** 2) === 0) return { value: bytes / (1024 ** 2), unit: 'MB' };
+    if (bytes % 1024 === 0) return { value: bytes / 1024, unit: 'KB' };
+    return { value: bytes, unit: 'B' };
+  }
+
+  formatSize(bytes: number): string {
+    if (bytes >= 1024 ** 3) return (bytes / (1024 ** 3)).toFixed(2) + ' GB';
+    if (bytes >= 1024 ** 2) return (bytes / (1024 ** 2)).toFixed(2) + ' MB';
+    if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return bytes + ' B';
+  }
+
+
 
   // ================= SECCIONES BASE =================
   memorySections: MemorySection[] = [
@@ -60,12 +88,24 @@ export class MemorySizeEditor implements OnInit {
   }
 
   // ================= ACTUALIZAR MEMORIA =================
-  setMemorySizeFromHex(value: string) {
-    const size = this.parseHex(value);
-    if (size < this.memoryConfig.minSize || size > this.memoryConfig.maxSize) return;
-    this.memorySize = size;
+  onMemorySizeInputChange(value: string) {
+    const numericValue = Number(value);
+    if (isNaN(numericValue) || numericValue <= 0) return;
+
+    const bytes = this.getBytesFromUnit(numericValue, this.memoryUnit);
+    if (bytes < this.memoryConfig.minSize || bytes > this.memoryConfig.maxSize) return;
+
+    this.memorySizeInput = numericValue;
+    this.memorySize = bytes;
     this.validateSections();
   }
+
+  onMemoryUnitChange() {
+    // recalcular en bytes con nueva unidad
+    this.memorySize = this.getBytesFromUnit(this.memorySizeInput, this.memoryUnit);
+    this.validateSections();
+  }
+
 
   updateSectionEnd(name: string, value: string) {
     const section = this.memorySections.find(s => s.name === name && s.editable);
