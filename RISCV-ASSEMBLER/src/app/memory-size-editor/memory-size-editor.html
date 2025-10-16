@@ -1,0 +1,31 @@
+<div
+  class="fixed top-0 left-0 h-full bg-slate-800 text-white flex flex-col shadow-xl z-50 transition-transform duration-300
+         w-full sm:w-[480px] md:w-[480px] lg:w-[500px]">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between bg-slate-700 border-b border-slate-600 h-12 px-4">
+    <h2 class="text-xl font-semibold">Memory Size Editor</h2>
+
+    <!-- Botón de cerrar visible SOLO en pantallas pequeñas -->
+    <button
+      (click)="onCloseClick()"
+      class="sm:hidden bg-gray-200 hover:bg-gray-300 text-white px-3 py-1 rounded transition">
+      ⮜
+    </button>
+  </div>
+
+  <!-- Contenido -->
+  <div class="flex-1 p-4 overflow-y-auto">
+    <p class="text-gray-200">
+      Este panel servirá para editar la memoria del ensamblador.
+    </p>
+  </div>
+
+  <!-- Botón lateral visible SOLO en pantallas medianas/grandes -->
+  <button
+    (click)="onCloseClick()"
+    class="hidden sm:block absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-full
+           bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 shadow-lg transition rounded-r-md">
+    ⮜
+  </button>
+</div>

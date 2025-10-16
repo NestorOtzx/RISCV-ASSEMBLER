@@ -2,13 +2,14 @@ import { Component, signal, computed, ViewChild, ElementRef } from '@angular/cor
 import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from './text-editor/text-editor';
+import { MemorySizeEditor } from './memory-size-editor/memory-size-editor';
 import { saveAs } from 'file-saver';
 import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion, BinaryToBinary, RiscVToRiscV, HexToHex,  } from './assembler/translator';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, FormsModule, TextEditor],
+  imports: [RouterOutlet, FormsModule, TextEditor, MemorySizeEditor],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -21,6 +22,7 @@ export class App {
   selectedOutputFormat = signal<'binary' | 'hexadecimal' | 'riscv'>('binary');
   previousInputFormat = 'riscv'
   selectedLineIndexing = signal<'numbers' | 'direction'>('numbers');
+  showMemoryEditor = signal(false);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
@@ -30,6 +32,14 @@ export class App {
 
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
+
+  toggleMemoryEditor() {
+    this.showMemoryEditor.update(v => !v);
+  }
+
+  closeMemoryEditor() {
+    this.showMemoryEditor.set(false);
+  }
 
   convertInputToOutput() {
     const lines = this.inputText().toLowerCase().split('\n');
