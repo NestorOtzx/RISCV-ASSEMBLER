@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Output, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
 interface MemorySection {
@@ -12,7 +13,7 @@ interface MemorySection {
 @Component({
   selector: 'app-memory-size-editor',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './memory-size-editor.html',
   styleUrls: ['./memory-size-editor.css']
 })
@@ -58,10 +59,10 @@ export class MemorySizeEditor implements OnInit {
 
   // ================= SECCIONES BASE =================
   memorySections: MemorySection[] = [
-    { name: 'Reserved', end: 0x00400000, color: '#374151', editable: true },
-    { name: 'Text', end: 0x10000000, color: '#2563eb', editable: true },
-    { name: 'Static Data', end: 0x20000000, color: '#16a34a', editable: true },
-    { name: 'Stack / Dynamic Data', end: 0x3ffffffff0, color: '#ca8a04', editable: false }
+    { name: 'Reserved', end: 0x00400000, color: '#008cffff', editable: true },
+    { name: 'Text', end: 0x10000000, color: '#5900ffff', editable: true },
+    { name: 'Static Data', end: 0x20000000, color: '#1f0066ff', editable: true },
+    { name: 'Stack / Dynamic Data', end: 0x3ffffffff0, color: '#41005aff', editable: false }
   ];
 
   // ================= UNITY LIFECYCLE METHODS =================
