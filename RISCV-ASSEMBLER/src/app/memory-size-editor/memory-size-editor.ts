@@ -100,11 +100,7 @@ export class MemorySizeEditor implements OnInit {
     const bytes = this.getBytesFromUnit(numericValue, this.memoryUnit);
     // validación básica de límites
     if (bytes < this.memoryConfig.minSize || bytes > this.memoryConfig.maxSize) {
-      this.memorySizeError = `Valor fuera de rango (${this.formatSize(this.memoryConfig.minSize)} - ${this.formatSize(this.memoryConfig.maxSize)})`;
-      // actualizar visualmente errores en secciones mediante una simulación mínima
-      const simulated = this.memorySections.map(s => ({ ...s }));
-      simulated[simulated.length - 1].end = bytes;
-      this.validateSections(simulated); // esto copia errores a real
+      this.memorySizeError = `Value out of range (${this.formatSize(this.memoryConfig.minSize)} - ${this.formatSize(this.memoryConfig.maxSize)})`;
       return;
     }
 
@@ -114,14 +110,16 @@ export class MemorySizeEditor implements OnInit {
     simulated[lastIndex].end = bytes;
 
     const ok = this.validateSections(simulated, bytes);
+    console.log(" OK? : "+ok + " simulated: ", simulated, "real: ", this.memorySections);
     if (ok) {
       this.memorySizeInput = numericValue;
       this.memorySize = bytes;
-      this.memorySections = simulated;
       this.memorySizeError = undefined;
+      this.memorySections = simulated;
+
     } else {
       // aquí validateSections ya copió los errores a memorySections; añadimos un mensaje global
-      this.memorySizeError = 'Cambio inválido: revisa las secciones resaltadas.';
+      this.memorySizeError = 'Invalid change: this change overlaps a section end, please check the highlighted sections.';
     }
   }
 
@@ -151,10 +149,7 @@ export class MemorySizeEditor implements OnInit {
     this.memorySections = simulated;
     this.memorySizeError = undefined;
   } else {
-    // copiar errores ya hecho por validateSections; no cambiar unidad ni valor visible
-    this.memorySizeError = 'Cambio de unidad inválido: revisa las secciones resaltadas.';
-    // mantener previousUnit para la próxima vez
-    // (no sobrescribimos memoryUnit porque ngModel ya lo cambió, así que lo volvemos atrás)
+    this.memorySizeError = 'Invalid unit change: this change overlaps a section end, please check the highlighted sections.';
     this.memoryUnit = oldUnit;
   }
 
@@ -205,7 +200,7 @@ export class MemorySizeEditor implements OnInit {
     for (let i = 1; i < tempEnds.length; i++) {
       if (tempEnds[i] <= tempEnds[i - 1]) {
         isAscending = false;
-        testSections[i].error = 'This segment end is not correct.';
+        testSections[i].error = 'Invalid end address for this segment.';
       } else {
         testSections[i].error = undefined;
       }
@@ -215,7 +210,7 @@ export class MemorySizeEditor implements OnInit {
       realSection.error = testSections[i].error;
     });
 
-
+    this.memorySections = [...this.memorySections];
     return isAscending;
   }
 

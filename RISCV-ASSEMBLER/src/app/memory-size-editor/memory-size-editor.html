@@ -87,11 +87,12 @@
                   title="Editar límite inferior de {{ section.name }}"
                 />
                 <!-- ⚠️ Mensaje de error -->
-                @if (memorySections[i - 1].error) {
+                @if (section.error) {
                   <span class="text-[10px] text-red-400 mt-1 bg-slate-800 px-1 rounded shadow-sm border border-red-500/50">
-                    {{ memorySections[i - 1].error }}
+                    {{ section.error }}
                   </span>
                 }
+
               </div>
             }
           </div>
