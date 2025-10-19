@@ -30,9 +30,12 @@
           [(ngModel)]="memoryUnit"
           (change)="onMemoryUnitChange($event)"
           class="bg-slate-800 text-gray-200 border border-slate-500 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-500">
+          <option value="B">B</option>
           <option value="KB">KB</option>
           <option value="MB">MB</option>
           <option value="GB">GB</option>
+          <option value="HEX">HEX</option>
+
         </select>
       </div>
       @if (memorySizeError) {

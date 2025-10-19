@@ -38,9 +38,11 @@ export class MemorySizeEditor implements OnInit {
   // ================= CONVERSIÓN DE UNIDADES =================
   getBytesFromUnit(value: number, unit: string): number {
     switch (unit) {
+      case 'B': return value;
       case 'KB': return value * 1024;
       case 'MB': return value * 1024 * 1024;
       case 'GB': return value * 1024 * 1024 * 1024;
+      case 'HEX': return parseInt(value.toString(), 16);
       default: return value;
     }
   }
@@ -49,8 +51,10 @@ export class MemorySizeEditor implements OnInit {
     if (bytes % (1024 ** 3) === 0) return { value: bytes / (1024 ** 3), unit: 'GB' };
     if (bytes % (1024 ** 2) === 0) return { value: bytes / (1024 ** 2), unit: 'MB' };
     if (bytes % 1024 === 0) return { value: bytes / 1024, unit: 'KB' };
+    if (Number.isInteger(bytes)) return { value: parseInt(bytes.toString(16).toUpperCase(), 16), unit: 'HEX' };
     return { value: bytes, unit: 'B' };
   }
+
 
   formatSize(bytes: number): string {
     if (bytes >= 1024 ** 3) return (bytes / (1024 ** 3)).toFixed(2) + ' GB';
@@ -58,8 +62,6 @@ export class MemorySizeEditor implements OnInit {
     if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
     return bytes + ' B';
   }
-
-
 
   // ================= SECCIONES BASE =================
   memorySections: MemorySection[] = [
@@ -71,7 +73,6 @@ export class MemorySizeEditor implements OnInit {
 
   // ================= UNITY LIFECYCLE METHODS =================
   ngOnInit() {
-    // Asegura que la sección de Stack/Dynamic Data esté correctamente calculada al iniciar
     this.validateSections(this.memorySections);
   }
 
@@ -98,79 +99,69 @@ export class MemorySizeEditor implements OnInit {
     if (isNaN(numericValue)) return;
 
     const bytes = this.getBytesFromUnit(numericValue, this.memoryUnit);
-    // validación básica de límites
+
+    // 🔸 Validación básica de límites
     if (bytes < this.memoryConfig.minSize || bytes > this.memoryConfig.maxSize) {
       this.memorySizeError = `Value out of range (${this.formatSize(this.memoryConfig.minSize)} - ${this.formatSize(this.memoryConfig.maxSize)})`;
       return;
     }
 
-    // simulación completa
     const simulated = this.memorySections.map(s => ({ ...s }));
     const lastIndex = simulated.length - 1;
     simulated[lastIndex].end = bytes;
 
     const ok = this.validateSections(simulated, bytes);
-    console.log(" OK? : "+ok + " simulated: ", simulated, "real: ", this.memorySections);
     if (ok) {
       this.memorySizeInput = numericValue;
       this.memorySize = bytes;
       this.memorySizeError = undefined;
       this.memorySections = simulated;
-
     } else {
-      // aquí validateSections ya copió los errores a memorySections; añadimos un mensaje global
       this.memorySizeError = 'Invalid change: this change overlaps a section end, please check the highlighted sections.';
     }
   }
 
-
-
   onMemoryUnitChange(event?: Event) {
-  // Obtener la unidad anterior (antes de que Angular actualice)
-  const oldUnit = this.previousUnit || this.memoryUnit;
-  const newUnit = (event?.target as HTMLSelectElement)?.value || this.memoryUnit;
+    const oldUnit = this.previousUnit || this.memoryUnit;
+    const newUnit = (event?.target as HTMLSelectElement)?.value || this.memoryUnit;
 
-  // Convertir el valor actual a bytes usando la unidad anterior
-  const bytes = this.getBytesFromUnit(this.memorySizeInput, oldUnit);
+    // 🔹 Convertir el valor actual a bytes usando la unidad anterior
+    const bytes = this.getBytesFromUnit(this.memorySizeInput, oldUnit);
 
-  // Calcular el nuevo valor visual según la nueva unidad
-  const newValue = this.convertBytesToUnit(bytes, newUnit);
+    // 🔹 Calcular el nuevo valor visual según la nueva unidad
+    const newValue = this.convertBytesToUnit(bytes, newUnit);
 
-  // Simular la asignación del nuevo tamaño (no aplicar hasta validar)
-  const simulated = this.memorySections.map(s => ({ ...s }));
-  simulated[simulated.length - 1].end = bytes;
+    // 🔹 Simular validación
+    const simulated = this.memorySections.map(s => ({ ...s }));
+    simulated[simulated.length - 1].end = bytes;
 
-  const ok = this.validateSections(simulated, bytes);
-  if (ok) {
-    // aplicar cambio
-    this.memoryUnit = newUnit;
-    this.memorySizeInput = parseFloat(newValue.toFixed(2));
-    this.memorySize = bytes;
-    this.memorySections = simulated;
-    this.memorySizeError = undefined;
-  } else {
-    this.memorySizeError = 'Invalid unit change: this change overlaps a section end, please check the highlighted sections.';
-    this.memoryUnit = oldUnit;
+    const ok = this.validateSections(simulated, bytes);
+    if (ok) {
+      this.memoryUnit = newUnit;
+      this.memorySizeInput = parseFloat(newValue.toFixed(2));
+      this.memorySize = bytes;
+      this.memorySections = simulated;
+      this.memorySizeError = undefined;
+    } else {
+      this.memorySizeError = 'Invalid unit change: this change overlaps a section end, please check the highlighted sections.';
+      this.memoryUnit = oldUnit;
+    }
+
+    this.previousUnit = this.memoryUnit;
   }
-
-  // Guardar la nueva unidad (si fue exitosa) o mantener previousUnit para el próximo cambio
-  this.previousUnit = this.memoryUnit;
-}
-
-
 
   convertBytesToUnit(bytes: number, unit: string): number {
     switch (unit) {
+      case 'B': return bytes;
       case 'KB': return bytes / 1024;
       case 'MB': return bytes / (1024 * 1024);
       case 'GB': return bytes / (1024 * 1024 * 1024);
+      case 'HEX': return parseFloat(bytes.toString(16).toUpperCase());
       default: return bytes;
     }
   }
 
-
-
-
+  // ================= SECCIONES =================
   updateSectionEnd(name: string, value: string) {
     const index = this.memorySections.findIndex(s => s.name === name && s.editable);
     if (index === -1) return;
@@ -178,22 +169,18 @@ export class MemorySizeEditor implements OnInit {
     const newEnd = this.parseHex(value);
     if (newEnd <= 0) return;
 
-    // Crear copia simulada
     const simulated = this.memorySections.map(s => ({ ...s }));
     simulated[index].end = newEnd;
 
-    // Validar primero
     if (this.validateSections(simulated)) {
-      // ✅ Si pasa validación, aplicar cambios reales
       this.memorySections = simulated;
     }
   }
 
-
   // ================= VALIDACIONES =================
   validateSections(testSections: MemorySection[], bytes?: number): boolean {
     const tempEnds = testSections.map(s => s.end);
-    const memsize = bytes? bytes : this.memorySize;
+    const memsize = bytes ? bytes : this.memorySize;
     tempEnds[tempEnds.length - 1] = memsize;
 
     let isAscending = true;
@@ -214,7 +201,6 @@ export class MemorySizeEditor implements OnInit {
     return isAscending;
   }
 
-
   // ================= VISUALIZACIÓN =================
   getSectionStyle(section: MemorySection, index: number) {
     let start = 0;
@@ -224,11 +210,10 @@ export class MemorySizeEditor implements OnInit {
     const sectionSize = section.end - start;
     const percentage = (sectionSize / total) * 100;
 
-    // Altura proporcional, con un mínimo visible de 40px
     return {
       'background-color': section.color,
       height: `${Math.max(percentage, 1)}%`,
-      minHeight: '60px', // 👈 asegura que el texto no se oculte
+      minHeight: '60px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center'
