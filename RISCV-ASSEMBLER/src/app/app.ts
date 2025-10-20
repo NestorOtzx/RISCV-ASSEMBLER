@@ -43,7 +43,7 @@ export class App {
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
 
-  
+
   onMemoryEditorUpdate(event: { sections: any[]; size: number; unit: string }) {
     this.memorySections = event.sections;
     this.memorySize = event.size;
@@ -126,6 +126,13 @@ export class App {
     result?.errors.forEach(e => this.editor.markLineAsWrong(e.line, e.message));
 
     this.updateActiveOutputLine();
+  }
+
+  onOutsideClick(event: MouseEvent) {
+    const editorElement = document.querySelector('app-memory-size-editor');
+    if (editorElement && !editorElement.contains(event.target as Node)) {
+      this.closeMemoryEditor();
+    }
   }
 
   // Línea activa → output
