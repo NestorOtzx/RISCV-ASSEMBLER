@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
@@ -22,6 +22,13 @@ export class MemorySizeEditor implements OnInit {
 
   readonly MAX_SECTION_SIZE: number = 64;
 
+  @Input() sections!: MemorySection[];
+  @Input() memorySize!: number;
+  @Input() unit!: string;
+
+  @Output() update = new EventEmitter<{ sections: MemorySection[]; size: number; unit: string }>();
+
+
   // ================= CONFIGURACIÓN BASE =================
   memoryConfig = {
     minSize: 0x00000100, // 1 KiB
@@ -29,9 +36,9 @@ export class MemorySizeEditor implements OnInit {
     maxSize: 0x1000000000 // 64 GiB
   };
 
-  memorySize: number = this.memoryConfig.defaultSize;
-  memorySizeInput: number = 4; // valor inicial (4 GB)
-  memoryUnit: string = 'GB';
+  memorySections: MemorySection[] = [];
+  memorySizeInput: number = 0;
+  memoryUnit: string = '';
   previousUnit: string = 'GB';
   memorySizeError?: string;
 
@@ -63,18 +70,15 @@ export class MemorySizeEditor implements OnInit {
     return bytes + ' B';
   }
 
-  // ================= SECCIONES BASE =================
-  memorySections: MemorySection[] = [
-    { name: 'Reserved', end: 0x00400000, color: '#008cffff', editable: true },
-    { name: 'Text', end: 0x10000000, color: '#5900ffff', editable: true },
-    { name: 'Static Data', end: 0x20000000, color: '#1f0066ff', editable: true },
-    { name: 'Stack / Dynamic Data', end: 0x3ffffffff0, color: '#41005aff', editable: false }
-  ];
 
   // ================= UNITY LIFECYCLE METHODS =================
   ngOnInit() {
+    this.memorySections = structuredClone(this.sections);
+    this.memoryUnit = this.unit;
+    this.memorySizeInput = this.convertBytesToUnit(this.memorySize, this.unit);
     this.validateSections(this.memorySections);
   }
+
 
   // ================= MÉTODOS DE FORMATEO =================
   toHex(value: number): string {
@@ -116,9 +120,21 @@ export class MemorySizeEditor implements OnInit {
       this.memorySize = bytes;
       this.memorySizeError = undefined;
       this.memorySections = simulated;
+      this.emit();
     } else {
       this.memorySizeError = 'Invalid change: this change overlaps a section end, please check the highlighted sections.';
     }
+
+
+  }
+
+  emit()
+  {
+    this.update.emit({
+      sections: this.memorySections,
+      size: this.memorySize,
+      unit: this.memoryUnit
+    });
   }
 
   onMemoryUnitChange(event?: Event) {
@@ -142,6 +158,7 @@ export class MemorySizeEditor implements OnInit {
       this.memorySize = bytes;
       this.memorySections = simulated;
       this.memorySizeError = undefined;
+      this.emit();
     } else {
       this.memorySizeError = 'Invalid unit change: this change overlaps a section end, please check the highlighted sections.';
       this.memoryUnit = oldUnit;
@@ -174,6 +191,7 @@ export class MemorySizeEditor implements OnInit {
 
     if (this.validateSections(simulated)) {
       this.memorySections = simulated;
+      this.emit();
     }
   }
 

@@ -52,7 +52,13 @@
   <!-- INPUT + OUTPUT -->
   <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
   @if (showMemoryEditor()) {
-    <app-memory-size-editor (close)="closeMemoryEditor()"></app-memory-size-editor>
+    <app-memory-size-editor
+      [sections]="memorySections"
+      [memorySize]="memorySize"
+      [unit]="memoryUnit"
+      (update)="onMemoryEditorUpdate($event)"
+      (close)="closeMemoryEditor()"
+    ></app-memory-size-editor>
   }
   <div class="flex flex-col md:flex-row h-[calc(100%-6.5rem)] p-4 gap-4">
 

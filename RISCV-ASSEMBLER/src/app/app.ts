@@ -24,6 +24,16 @@ export class App {
   selectedLineIndexing = signal<'numbers' | 'direction'>('numbers');
   showMemoryEditor = signal(false);
 
+  memorySections = [
+    { name: 'Reserved', end: 0x00400000, color: '#008cffff', editable: true },
+    { name: 'Text', end: 0x10000000, color: '#5900ffff', editable: true },
+    { name: 'Static Data', end: 0x20000000, color: '#1f0066ff', editable: true },
+    { name: 'Stack / Dynamic Data', end: 0x3ffffffff0, color: '#41005aff', editable: false }
+  ];
+
+  memorySize = 0x100000000;
+  memoryUnit = 'GB';
+
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('outputScrollContainer') outputScrollContainer!: ElementRef<HTMLDivElement>;
@@ -32,6 +42,14 @@ export class App {
 
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
+
+  
+  onMemoryEditorUpdate(event: { sections: any[]; size: number; unit: string }) {
+    this.memorySections = event.sections;
+    this.memorySize = event.size;
+    this.memoryUnit = event.unit;
+  }
+
 
   toggleMemoryEditor() {
     this.showMemoryEditor.update(v => !v);
