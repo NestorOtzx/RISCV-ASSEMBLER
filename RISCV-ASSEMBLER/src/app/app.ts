@@ -2,17 +2,20 @@ import { Component, signal, computed, ViewChild, ElementRef } from '@angular/cor
 import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from './text-editor/text-editor';
+import { ExportWindow } from './export-window/export-window';
 import { saveAs } from 'file-saver';
 import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion, BinaryToBinary, RiscVToRiscV, HexToHex,  } from './assembler/translator';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, FormsModule, TextEditor],
+  imports: [RouterOutlet, FormsModule, TextEditor, ExportWindow],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
+  showExportWindow = false;
+
   inputText = signal('');
   inputActiveLine = signal(0);
   outputActiveLine = signal(-1);
@@ -27,6 +30,7 @@ export class App {
   @ViewChild('outputScrollContainer') outputScrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('editor') editor!: TextEditor;
   @ViewChild('outputTextEditor') outputTextEditor!: TextEditor;
+  @ViewChild('exportWindow') exportWindow!: ExportWindow;
 
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
@@ -193,4 +197,17 @@ export class App {
     //const blob = new Blob([this.outputTextSignal()], { type: 'text/plain;charset=utf-8' });
     //saveAs(blob, `output.${extension}`);
   }
+
+  openExportWindow() {
+    this.showExportWindow = true;
+    // Espera un ciclo para asegurar que el componente esté montado
+    setTimeout(() => {
+      this.exportWindow.setContent(this.outputText);
+    });
+  }
+
+  closeExportWindow() {
+    this.showExportWindow = false;
+  }
+
 }
