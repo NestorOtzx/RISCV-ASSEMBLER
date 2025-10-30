@@ -2,6 +2,7 @@ import { Component, EventEmitter, Output, ViewChild, Input, signal } from '@angu
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from '../text-editor/text-editor';
 import { BinaryToHex, HexToBinary, BinaryToBinary, HexToHex, RiscVToBinary } from '../assembler/translator';
+import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-export-window',
@@ -14,31 +15,39 @@ export class ExportWindow {
   @Output() close = new EventEmitter<void>();
   @ViewChild('exportTextEditor') exportTextEditor!: TextEditor;
 
-  // === INPUT FROM PARENT === //
+  // === INPUTS FROM PARENT === //
   @Input({ required: true }) selectedOutputFormat!: 'binary' | 'hexadecimal' | 'riscv';
+  @Input() initialMemSize = 256;
+  @Input() initialStartAddress = 0;
+  @Input() initialMemoryWidth: 8 | 32 = 8;
 
   // === REACTIVE SIGNALS === //
-  baseText = signal(''); // Unprocessed text (set by the parent)
+  baseText = signal('');
   inputFormat = signal<'binary' | 'hexadecimal'>('binary');
   outputFormat = signal<'text' | 'vhdl' | 'verilog'>('text');
-  startAddress = signal(0);
+  startAddress = signal(this.initialStartAddress);
+  memSize = signal(this.initialMemSize);
+  memoryWidth = signal<8 | 32>(this.initialMemoryWidth);
+  componentName = signal('MemoryBlock');
+
+  // === INTERNAL STATE === //
+  exportedContent = '';
 
   // === HDL TEMPLATES === //
-  readonly VHDL_TEMPLATE = `
-library IEEE;
+  readonly VHDL_TEMPLATE = `library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
-entity MemoryBlock is
+entity {COMPONENT_NAME} is
   Port (
     clk : in STD_LOGIC;
     addr : in INTEGER range 0 to {MEM_SIZE}-1;
-    data_out : out STD_LOGIC_VECTOR(7 downto 0)
+    data_out : out STD_LOGIC_VECTOR({DATA_WIDTH} downto 0)
   );
-end MemoryBlock;
+end {COMPONENT_NAME};
 
-architecture Behavioral of MemoryBlock is
-  type memory_t is array (0 to {MEM_SIZE}-1) of STD_LOGIC_VECTOR(7 downto 0);
+architecture Behavioral of {COMPONENT_NAME} is
+  type memory_t is array (0 to {MEM_SIZE}-1) of STD_LOGIC_VECTOR({DATA_WIDTH} downto 0);
   constant memory : memory_t := (
 {MEM_CONTENT}
   );
@@ -53,12 +62,12 @@ end Behavioral;
 `;
 
   readonly VERILOG_TEMPLATE = `
-module MemoryBlock(
+module {COMPONENT_NAME}(
   input logic clk,
   input logic [31:0] addr,
-  output logic [7:0] data_out
+  output logic [{DATA_WIDTH}:0] data_out
 );
-  logic [7:0] memory [0:{MEM_SIZE}-1] = '{
+  logic [{DATA_WIDTH}:0] memory [0:{MEM_SIZE}-1] = '{
 {MEM_CONTENT}
   };
 
@@ -70,17 +79,11 @@ endmodule
 
   // === MAIN METHODS === //
 
-  /**
-   * Called by the parent to set the base text.
-   */
   setContent(content: string): void {
     this.baseText.set(content);
     this.updateEditorContent();
   }
 
-  /**
-   * Processes the text and updates the editor according to the selected formats.
-   */
   private updateEditorContent(): void {
     if (!this.exportTextEditor) return;
 
@@ -90,82 +93,70 @@ endmodule
     const inputFormat = this.inputFormat();
     const outputFormat = this.outputFormat();
     const startAddress = this.startAddress();
+    const memoryWidth = this.memoryWidth();
+    const memSize = this.memSize();
+    const componentName = this.componentName();
 
     const processed = this.processInput(raw, inputFormat);
-    const output = this.generateOutput(processed, outputFormat, startAddress);
+    const output = this.generateOutput(processed, outputFormat, startAddress, memoryWidth, memSize, componentName);
 
     this.exportTextEditor.setContent(output);
+    this.exportedContent = output;
   }
 
-  /**
-   * Converts the text from the original format (selectedOutputFormat)
-   * to the desired input format (chosen from the dropdown).
-   */
   private processInput(text: string, inputFormat: string): string[] {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-    const source = this.selectedOutputFormat; // Original format
+    const source = this.selectedOutputFormat;
 
-    console.log("Source:", source, "Target input format:", inputFormat);
+    if (source === 'binary' && inputFormat === 'binary') return BinaryToBinary(lines).output;
+    if (source === 'binary' && inputFormat === 'hexadecimal') return BinaryToHex(lines).output;
+    if (source === 'hexadecimal' && inputFormat === 'binary') return HexToBinary(lines).output;
+    if (source === 'hexadecimal' && inputFormat === 'hexadecimal') return HexToHex(lines).output;
+    if (source === 'riscv' && inputFormat === 'binary') return RiscVToBinary(lines).output;
+    if (source === 'riscv' && inputFormat === 'hexadecimal') return BinaryToHex(RiscVToBinary(lines).output).output;
 
-    // === POSSIBLE CONVERSIONS === //
-    if (source === 'binary' && inputFormat === 'binary') {
-      return BinaryToBinary(lines).output;
-    }
-
-    if (source === 'binary' && inputFormat === 'hexadecimal') {
-      return BinaryToHex(lines).output;
-    }
-
-    if (source === 'hexadecimal' && inputFormat === 'binary') {
-      return HexToBinary(lines).output;
-    }
-
-    if (source === 'hexadecimal' && inputFormat === 'hexadecimal') {
-      return HexToHex(lines).output;
-    }
-
-    if (source === 'riscv' && inputFormat === 'binary') {
-      return RiscVToBinary(lines).output;
-    }
-
-    if (source === 'riscv' && inputFormat === 'hexadecimal') {
-      return BinaryToHex(RiscVToBinary(lines).output).output;
-    }
-
-    // Fallback: return lines as-is
     return lines;
   }
 
-  /**
-   * Generates the output based on the selected output format.
-   */
-  private generateOutput(lines: string[], outputFormat: string, start: number): string {
+  private generateOutput(
+    lines: string[],
+    outputFormat: string,
+    start: number,
+    memoryWidth: 8 | 32,
+    memSize: number,
+    componentName: string
+  ): string {
     switch (outputFormat) {
       case 'text':
         return lines.join('\n');
-
       case 'vhdl':
-        return this.generateHDL(this.VHDL_TEMPLATE, lines, start);
-
+        return this.generateHDL(this.VHDL_TEMPLATE, lines, start, memoryWidth, memSize, componentName);
       case 'verilog':
-        return this.generateHDL(this.VERILOG_TEMPLATE, lines, start);
-
+        return this.generateHDL(this.VERILOG_TEMPLATE, lines, start, memoryWidth, memSize, componentName);
       default:
         return '';
     }
   }
 
-  /**
-   * Inserts the memory data into the corresponding HDL template.
-   */
-  private generateHDL(template: string, lines: string[], start: number): string {
+  private generateHDL(
+    template: string,
+    lines: string[],
+    start: number,
+    memoryWidth: 8 | 32,
+    memSize: number,
+    componentName: string
+  ): string {
+    const dataWidth = memoryWidth - 1;
+
     const memContent = lines
       .map((line, i) => `    ${i + start} => "${line}"`)
       .join(',\n');
 
     return template
-      .replace('{MEM_SIZE}', (lines.length + start).toString())
-      .replace('{MEM_CONTENT}', memContent);
+      .replaceAll('{MEM_SIZE}', memSize.toString())
+      .replaceAll('{MEM_CONTENT}', memContent)
+      .replaceAll('{COMPONENT_NAME}', componentName)
+      .replaceAll('{DATA_WIDTH}', dataWidth.toString());
   }
 
   // === UI METHODS === //
@@ -187,5 +178,26 @@ endmodule
   onStartAddressChange(value: number): void {
     this.startAddress.set(Number(value));
     this.updateEditorContent();
+  }
+
+  onMemoryWidthChange(value: 8 | 32): void {
+    this.memoryWidth.set(value);
+    this.updateEditorContent();
+  }
+
+  onSave(): void {
+    const content = this.exportedContent;
+    if (!content.trim()) {
+      alert('There is no content to export.');
+      return;
+    }
+
+    let extension = 'txt';
+    if (this.outputFormat() === 'verilog') extension = 'v';
+    else if (this.outputFormat() === 'vhdl') extension = 'vhd';
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const fileName = `exported_data.${extension}`;
+    saveAs(blob, fileName);
   }
 }

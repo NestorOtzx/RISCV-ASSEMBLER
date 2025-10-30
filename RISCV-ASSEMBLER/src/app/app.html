@@ -44,7 +44,14 @@
   </div>
 
   @if (showExportWindow) {
-    <app-export-window (close)="closeExportWindow()" [selectedOutputFormat]="selectedOutputFormat()" #exportWindow></app-export-window>
+    <app-export-window 
+    [initialMemSize]="512"
+    [initialStartAddress]="16"
+    [initialMemoryWidth]="32"
+    [selectedOutputFormat]="selectedOutputFormat()" 
+    (close)="closeExportWindow()" 
+    #exportWindow>
+  </app-export-window>
   }
 
   <!-- INPUT + OUTPUT -->
