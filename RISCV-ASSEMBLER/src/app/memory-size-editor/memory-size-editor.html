@@ -12,9 +12,41 @@
     </button>
   </div>
 
+
+
+
   <!-- Contenido -->
   <div class="flex-1 p-4 overflow-y-auto space-y-6">
+      <!-- ===================== Memory Width ===================== -->
+  <div class="bg-slate-700 p-3 rounded-lg border border-slate-600">
+    <h3 class="font-semibold mb-2 text-gray-100">Memory Width</h3>
 
+    <div class="flex gap-3">
+      <!-- 8-bit button -->
+      <button
+        class="flex-1 px-3 py-2 rounded-md border transition text-sm font-medium"
+        [ngClass]="memoryWidth === 8
+          ? 'bg-blue-600 border-blue-500 text-white shadow-md'
+          : 'bg-slate-800 border-slate-600 text-gray-300 hover:bg-slate-600 hover:text-white'"
+        (click)="onSelectMemoryWidth(8)">
+        8-bit
+      </button>
+
+      <!-- 32-bit button -->
+      <button
+        class="flex-1 px-3 py-2 rounded-md border transition text-sm font-medium"
+        [ngClass]="memoryWidth === 32
+          ? 'bg-blue-600 border-blue-500 text-white shadow-md'
+          : 'bg-slate-800 border-slate-600 text-gray-300 hover:bg-slate-600 hover:text-white'"
+        (click)="onSelectMemoryWidth(32)">
+        32-bit
+      </button>
+    </div>
+
+    <p class="text-sm text-gray-400 mt-2">
+      Select the bit width used for addressing and data representation.
+    </p>
+  </div>
     <!-- ===================== Configuración de Memoria ===================== -->
     <div class="bg-slate-700 p-3 rounded-lg border border-slate-600">
       <h3 class="font-semibold mb-2 text-gray-100">Memory Size</h3>
@@ -80,8 +112,8 @@
             </div>
 
             <!-- Input para editar el inicio (flotante entre secciones) -->
-            @if (i > 0) {
-              <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10 flex flex-col items-center">
+            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10 flex flex-col items-center">
+              @if (i > 0) {
                 <input
                   type="text"
                   [value]="toHex(getSectionStart(i))"
@@ -89,15 +121,23 @@
                   class="w-28 bg-slate-800 text-gray-200 border border-slate-500 rounded px-1 py-0.5 text-xs shadow-md focus:outline-none focus:ring focus:ring-blue-500"
                   title="Editar límite inferior de {{ section.name }}"
                 />
+              }
                 <!-- ⚠️ Mensaje de error -->
                 @if (section.error) {
-                  <span class="text-[10px] text-red-400 mt-1 bg-slate-800 px-1 rounded shadow-sm border border-red-500/50">
+                  @if (i == 0) {
+                    <span class="text-[10px] text-red-400 mt-3 bg-slate-800 px-1 rounded shadow-sm border border-red-500/50">
                     {{ section.error }}
                   </span>
+                  } 
+                  @if (i > 0) {
+                    <span class="text-[10px] text-red-400 mt-1 bg-slate-800 px-1 rounded shadow-sm border border-red-500/50">
+                    {{ section.error }}
+                  </span>  
+                  } 
+                  
                 }
 
               </div>
-            }
           </div>
         }
       </div>
