@@ -3,13 +3,14 @@ import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from './text-editor/text-editor';
 import { ExportWindow } from './export-window/export-window';
+import { MemorySizeEditor } from './memory-size-editor/memory-size-editor';
 import { saveAs } from 'file-saver';
 import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion, BinaryToBinary, RiscVToRiscV, HexToHex,  } from './assembler/translator';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, FormsModule, TextEditor, ExportWindow],
+  imports: [RouterOutlet, FormsModule, TextEditor, ExportWindow, MemorySizeEditor],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -24,6 +25,17 @@ export class App {
   selectedOutputFormat = signal<'binary' | 'hexadecimal' | 'riscv'>('binary');
   previousInputFormat = 'riscv'
   selectedLineIndexing = signal<'numbers' | 'direction'>('numbers');
+  showMemoryEditor = signal(false);
+
+  memorySections = [
+    { name: 'Reserved', end: 0x00400000, color: '#008cffff', editable: true },
+    { name: 'Text', end: 0x10000000, color: '#5900ffff', editable: true },
+    { name: 'Static Data', end: 0x20000000, color: '#1f0066ff', editable: true },
+    { name: 'Stack / Dynamic Data', end: 0x3ffffffff0, color: '#41005aff', editable: false }
+  ];
+
+  memorySize = 0x100000000;
+  memoryUnit = 'GB';
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
@@ -34,6 +46,22 @@ export class App {
 
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
+
+
+  onMemoryEditorUpdate(event: { sections: any[]; size: number; unit: string }) {
+    this.memorySections = event.sections;
+    this.memorySize = event.size;
+    this.memoryUnit = event.unit;
+  }
+
+
+  toggleMemoryEditor() {
+    this.showMemoryEditor.update(v => !v);
+  }
+
+  closeMemoryEditor() {
+    this.showMemoryEditor.set(false);
+  }
 
   convertInputToOutput() {
     const lines = this.inputText().toLowerCase().split('\n');
@@ -102,6 +130,13 @@ export class App {
     result?.errors.forEach(e => this.editor.markLineAsWrong(e.line, e.message));
 
     this.updateActiveOutputLine();
+  }
+
+  onOutsideClick(event: MouseEvent) {
+    const editorElement = document.querySelector('app-memory-size-editor');
+    if (editorElement && !editorElement.contains(event.target as Node)) {
+      this.closeMemoryEditor();
+    }
   }
 
   // Línea activa → output

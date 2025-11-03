@@ -30,12 +30,15 @@ export function handlePaste(
 ) {
   const prevHTML = editorEl.innerHTML;
   const selection = window.getSelection();
+  console.log("Selection: "+selection+ "range count: "+selection?.rangeCount);
   if (!selection || selection.rangeCount === 0) return;
 
   const range = selection.getRangeAt(0);
 
   let startDiv = getClosestDiv(range.startContainer, editorEl);
+  console.log("Selection start div: ", startDiv);
   let endDiv = getClosestDiv(range.endContainer, editorEl);
+  console.log("Selection end div: ", endDiv);
 
   if (!startDiv) {
     startDiv = document.createElement('div');
@@ -44,8 +47,10 @@ export function handlePaste(
   }
   if (!endDiv) endDiv = startDiv;
 
-  const afterText = endDiv.textContent?.slice(range.endOffset) || '';
-  const beforeText = startDiv.textContent?.slice(0, range.startOffset) || '';
+  const beforeText = getTextBeforeRange(startDiv, range);
+  const afterText = getTextAfterRange(endDiv, range);
+
+  console.log("Selection range: "+range+ "end offset: "+ range.endOffset + " start offset: "+ range.startOffset + " TEXT "+afterText + " : "+beforeText);
 
   const divs = Array.from(editorEl.querySelectorAll('div'));
   const startIndex = divs.indexOf(startDiv);
@@ -96,6 +101,46 @@ export function handlePaste(
     highlightActiveLine();
   }
 }
+
+function getTextBeforeRange(div: HTMLDivElement, range: Range): string {
+  const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT, null);
+  let result = '';
+  let node: Node | null = walker.nextNode();
+
+  while (node) {
+    const text = node.textContent || '';
+    if (node === range.startContainer) {
+      result += text.slice(0, range.startOffset);
+      break;
+    } else {
+      result += text;
+    }
+    node = walker.nextNode();
+  }
+
+  return result;
+}
+
+function getTextAfterRange(div: HTMLDivElement, range: Range): string {
+  const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT, null);
+  let result = '';
+  let foundStart = false;
+  let node: Node | null = walker.nextNode();
+
+  while (node) {
+    const text = node.textContent || '';
+    if (node === range.endContainer) {
+      result += text.slice(range.endOffset);
+      foundStart = true;
+    } else if (foundStart) {
+      result += text;
+    }
+    node = walker.nextNode();
+  }
+
+  return result;
+}
+
 
 export function deleteAll(
   editorEl: HTMLDivElement,
