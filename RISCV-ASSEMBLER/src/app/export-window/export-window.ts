@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, ViewChild, Input, signal } from '@angular/core';
+import { Component, EventEmitter, Output, ViewChild, Input, signal, OnInit  } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TextEditor } from '../text-editor/text-editor';
 import { BinaryToHex, HexToBinary, BinaryToBinary, HexToHex, RiscVToBinary } from '../assembler/translator';
@@ -77,6 +77,15 @@ module {COMPONENT_NAME}(
 endmodule
 `;
 
+  ngOnInit(): void {
+    this.memSize.set(this.initialMemSize);
+    this.startAddress.set(this.initialStartAddress);
+    this.memoryWidth.set(this.initialMemoryWidth);
+
+    // Opcionalmente puedes regenerar el contenido inicial si es necesario:
+    this.updateEditorContent();
+  }
+
   // === MAIN METHODS === //
 
   setContent(content: string): void {
@@ -138,26 +147,60 @@ endmodule
     }
   }
 
+  /**
+   * Genera el contenido HDL dividiendo las instrucciones en partes según memoryWidth.
+   * Si memoryWidth = 8, cada instrucción (de 32 bits) se divide en 4 bytes.
+   * Si memoryWidth = 32, se usa tal cual.
+   */
   private generateHDL(
-    template: string,
-    lines: string[],
-    start: number,
-    memoryWidth: 8 | 32,
-    memSize: number,
-    componentName: string
-  ): string {
-    const dataWidth = memoryWidth - 1;
+  template: string,
+  lines: string[],
+  start: number,
+  memoryWidth: 8 | 32,
+  memSize: number,
+  componentName: string
+): string {
+  const dataWidth = memoryWidth - 1;
+  const memLines: string[] = [];
 
-    const memContent = lines
-      .map((line, i) => `    ${i + start} => "${line}"`)
-      .join(',\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const isHex = line.startsWith('0x') || line.startsWith('0X');
 
-    return template
-      .replaceAll('{MEM_SIZE}', memSize.toString())
-      .replaceAll('{MEM_CONTENT}', memContent)
-      .replaceAll('{COMPONENT_NAME}', componentName)
-      .replaceAll('{DATA_WIDTH}', dataWidth.toString());
+    if (memoryWidth === 8) {
+      if (isHex) {
+        // === HEXADECIMAL MODE ===
+        const clean = line.replace(/^0x/i, '').padStart(8, '0');
+        const parts = [clean.slice(0, 2), clean.slice(2, 4), clean.slice(4, 6), clean.slice(6, 8)];
+        for (let j = 0; j < parts.length; j++) {
+          const addr = start + i * 4 + j;
+          memLines.push(`    ${addr} => "0x${parts[j]}"`);
+        }
+      } else {
+        // === BINARY MODE ===
+        const clean = line.replace(/\s+/g, '').padStart(32, '0'); // asegurar 32 bits
+        const parts = [clean.slice(0, 8), clean.slice(8, 16), clean.slice(16, 24), clean.slice(24, 32)];
+        for (let j = 0; j < parts.length; j++) {
+          const addr = start + i * 4 + j;
+          memLines.push(`    ${addr} => "${parts[j]}"`);
+        }
+      }
+    } else {
+      // === 32-bit WIDTH ===
+      const addr = start + i;
+      memLines.push(`    ${addr} => "${line}"`);
+    }
   }
+
+  const memContent = memLines.join(',\n');
+
+  return template
+    .replaceAll('{MEM_SIZE}', memSize.toString())
+    .replaceAll('{MEM_CONTENT}', memContent)
+    .replaceAll('{COMPONENT_NAME}', componentName)
+    .replaceAll('{DATA_WIDTH}', dataWidth.toString());
+}
+
 
   // === UI METHODS === //
 
