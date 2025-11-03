@@ -5,7 +5,7 @@ import { TextEditor } from './text-editor/text-editor';
 import { ExportWindow } from './export-window/export-window';
 import { MemorySizeEditor } from './memory-size-editor/memory-size-editor';
 import { saveAs } from 'file-saver';
-import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion, BinaryToBinary, RiscVToRiscV, HexToHex,  } from './assembler/translator';
+import { BinaryToRiscV, RiscVToBinary, HexToBinary, BinaryToHex, TranslationResult, NoConversion, BinaryToBinary, RiscVToRiscV, HexToHex } from './assembler/translator';
 
 @Component({
   selector: 'app-root',
@@ -28,14 +28,18 @@ export class App {
   showMemoryEditor = signal(false);
 
   memorySections = [
-    { name: 'Reserved', end: 0x00400000, color: '#008cffff', editable: true },
-    { name: 'Text', end: 0x10000000, color: '#5900ffff', editable: true },
-    { name: 'Static Data', end: 0x20000000, color: '#1f0066ff', editable: true },
-    { name: 'Stack / Dynamic Data', end: 0x3ffffffff0, color: '#41005aff', editable: false }
+    { name: 'Reserved', end: 0x0040, color: '#008cffff', editable: true },           //  64 B
+    { name: 'Text', end: 0x0100, color: '#5900ffff', editable: true },               // 256 B
+    { name: 'Static Data', end: 0x0200, color: '#1f0066ff', editable: true },       // 512 B
+    { name: 'Stack / Dynamic Data', end: 0x0400, color: '#41005aff', editable: false } // 1024 B (end)
   ];
 
-  memorySize = 0x100000000;
-  memoryUnit = 'GB';
+  // physical default: 1 KiB
+  memorySize = 0x0400; // 1024 bytes
+  memoryUnit = 'B'; 
+
+  // ** NUEVO: guardamos el width en la App y lo persistimos en localStorage **
+  memoryWidth = 8; // por defecto 8 bits
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('inputScrollContainer') inputScrollContainer!: ElementRef<HTMLDivElement>;
@@ -47,13 +51,38 @@ export class App {
   selectedConvertMethod = signal("automatic"); // nuevo
   compiled = signal<TranslationResult | null>(null); // antes era computed
 
+  constructor() {
+    // Cargar width guardado (si existe)
+    try {
+      const saved = localStorage.getItem('memoryWidth');
+      if (saved !== null) {
+        const n = Number(saved);
+        if (!isNaN(n) && (n === 8 || n === 32)) {
+          this.memoryWidth = n;
+        }
+      }
+    } catch (e) {
+      // ignore (no localStorage disponible)
+    }
+  }
 
-  onMemoryEditorUpdate(event: { sections: any[]; size: number; unit: string }) {
+  // --------------------------------------------------------------------------------
+  // Actualización desde MemorySizeEditor: ahora acepta width y lo persiste
+  // --------------------------------------------------------------------------------
+  onMemoryEditorUpdate(event: { sections: any[]; size: number; unit: string; width?: number }) {
     this.memorySections = event.sections;
     this.memorySize = event.size;
     this.memoryUnit = event.unit;
-  }
 
+    if (event.width !== undefined) {
+      this.memoryWidth = event.width;
+      try {
+        localStorage.setItem('memoryWidth', String(this.memoryWidth));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
 
   toggleMemoryEditor() {
     this.showMemoryEditor.update(v => !v);
@@ -112,6 +141,34 @@ export class App {
     return result;
   }
 
+  get exportInitialMemoryWidth(): 8 | 32 {
+  return this.memoryWidth === 32 ? 32 : 8;
+}
+
+    /**
+   * Tamaño direccionable lógico (número de direcciones) que pasaremos a ExportWindow.
+   * Calculado como: memorySize (bytes) / (memoryWidth / 8).
+   */
+  get exportInitialMemSize(): number {
+    const bytesPerAddr = this.memoryWidth / 8 || 1;
+    return Math.floor(this.memorySize / bytesPerAddr);
+  }
+
+  /**
+   * Dirección lógica donde inicia la sección "Text".
+   * Buscamos la sección 'Text', tomamos el 'end' del segmento anterior (en bytes)
+   * y lo convertimos a direcciones lógicas (división por bytesPerAddr).
+   */
+  get exportInitialStartAddress(): number {
+    const idx = this.memorySections.findIndex(s => s.name === 'Text');
+    if (idx === -1) return 0;
+
+    const prevEndBytes = idx === 0 ? 0 : (this.memorySections[idx - 1].end ?? 0);
+    const bytesPerAddr = this.memoryWidth / 8 || 1;
+    return Math.floor(prevEndBytes / bytesPerAddr);
+  }
+
+
   get outputText(): string {
     return this.compiled()?.output.join('\n') ?? '';
   }
@@ -119,7 +176,6 @@ export class App {
   get labelMap(): Record<string, number> {
     return this.compiled()?.labelMap ?? {};
   }
-
 
   updateEditorMarks() {
     if (!this.editor) return;
@@ -161,7 +217,6 @@ export class App {
     this.convertInputToOutput();
   }
 
-
   onInputActiveLineChange(line: number) {
     console.log("input active line changed to", line);
     this.inputActiveLine.set(line);
@@ -174,8 +229,6 @@ export class App {
     this.outputActiveLine.set(line);
     this.editor.setActiveLineByIndex(this.compiled()?.outputToEditor[line] ?? -1)
   }
-
-  
 
   switchFormats() {
     const prevInput = this.selectedInputFormat();
@@ -195,7 +248,6 @@ export class App {
     if (this.selectedConvertMethod() == 'automatic') this.convertInputToOutput();
   }
 
-
   onInputFormatChange(event: Event) {
     this.selectedInputFormat.set((event.target as HTMLSelectElement).value as any);
     const prev = this.previousInputFormat;
@@ -208,7 +260,7 @@ export class App {
     console.log("input format change "+prev + " "+ current);
     if (prev !== current) {
       this.editor.setContent(this.convertTextToFormat(this.inputText().split('\n'), prev, current)?.output.join('\n')||'')
-      
+
       this.convertInputToOutput();
     }
   }
@@ -244,5 +296,4 @@ export class App {
   closeExportWindow() {
     this.showExportWindow = false;
   }
-
 }

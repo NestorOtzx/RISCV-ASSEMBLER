@@ -1,10 +1,10 @@
-import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
 interface MemorySection {
   name: string;
-  // Nota: internamente `end` se guarda en DIRECCIONES (no en bytes)
+  // Internamente `end` se guarda en DIRECCIONES (no en bytes)
   end: number;
   color: string;
   error?: string;
@@ -18,7 +18,7 @@ interface MemorySection {
   templateUrl: './memory-size-editor.html',
   styleUrls: ['./memory-size-editor.css']
 })
-export class MemorySizeEditor implements OnInit {
+export class MemorySizeEditor implements OnInit, OnChanges {
   @Output() close = new EventEmitter<void>();
 
   readonly MAX_SECTION_SIZE: number = 64;
@@ -28,14 +28,18 @@ export class MemorySizeEditor implements OnInit {
   @Input() memorySize!: number; // Entrada heredada: tamaño FÍSICO en BYTES
   @Input() unit!: string;
 
+  // NUEVO: recibir el width desde el padre (8 o 32)
+  @Input() width?: number;
+
   @Output() update = new EventEmitter<{ sections: MemorySection[]; size: number; unit: string, width: number }>();
 
-  memoryWidth: number = 8;
+  // ================= NUEVO: ancho de memoria (bits) =================
+  memoryWidth: number = 8; // 8 o 32
 
   // ================= CONFIGURACIÓN BASE =================
   memoryConfig = {
     minSize: 0x00000100, // 1 KiB (bytes)
-    defaultSize: 0x100000000, // 4 GiB
+    defaultSize: 0x0400, // 4 GiB
     maxSize: 0x1000000000 // 64 GiB
   };
 
@@ -48,7 +52,7 @@ export class MemorySizeEditor implements OnInit {
   // memorySize ahora será el tamaño LÓGICO (en direcciones)
   memorySizeInput: number = 0; // valor mostrado en el input (representa tamaño físico)
   memoryUnit: string = '';
-  previousUnit: string = 'GB';
+  previousUnit: string = 'B';
   memorySizeError?: string;
 
   // ================= CONVERSIÓN Y AYUDANTES =================
@@ -95,6 +99,9 @@ export class MemorySizeEditor implements OnInit {
 
   // ================= LIFECYCLE =================
   ngOnInit() {
+    // Si el padre pasó un width, úsalo; si no, mantener el default (8)
+    if (this.width !== undefined) this.memoryWidth = this.width;
+
     // Guardamos el tamaño físico que llega por input (en bytes)
     this.physicalSizeBytes = this.memorySize;
 
@@ -119,8 +126,20 @@ export class MemorySizeEditor implements OnInit {
       this.memorySections[this.memorySections.length - 1].end = this.memorySize;
     }
 
-    // Validamos e inicializamos
+    // Validamos e inicializamos (propaga errores si existen)
     this.validateSections(this.memorySections);
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    // Si el padre cambió el width mientras el editor está abierto, lo aplicamos
+    if (changes['width'] && !changes['width'].isFirstChange()) {
+      const newWidth = changes['width'].currentValue;
+      if (newWidth === undefined) return;
+      // Reutilizar la lógica interna para cambiar width (reescala y revalida)
+      this.onSelectMemoryWidth(newWidth);
+    }
+    // Si el padre cambió sections/memorySize/unit directamente mientras abierto,
+    // podríamos reaccionar aquí también, pero evitar cambios automáticos no esperados.
   }
 
   // ================= MÉTODOS ÚTILES =================
@@ -243,7 +262,7 @@ export class MemorySizeEditor implements OnInit {
 
     // parseHex devuelve un número (interpretado como dirección)
     const newEnd = this.parseHex(value);
-    if (newEnd < 0) return;
+    if (newEnd <= 0) return;
 
     const simulated = this.memorySections.map(s => ({ ...s }));
     simulated[index].end = newEnd;
@@ -283,7 +302,6 @@ export class MemorySizeEditor implements OnInit {
         testSections[0].error = undefined;
       }
     }
-    console.log("errorr:", testSections[0].error);
 
     // --- Validación para el resto: cada end debe ser mayor que el end anterior ---
     for (let i = 1; i < tempEnds.length; i++) {

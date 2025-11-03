@@ -15,15 +15,15 @@
   <!-- TOOLBAR -->
   <div class="flex flex-wrap justify-between items-center p-2 gap-2">
     <div class="flex flex-row gap-2">
-      
-      <button (click)="fileInput.click()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Import</button>
+      <!-- Usamos la función del componente para abrir el file picker -->
+      <button (click)="onImportFile()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Import</button>
+
       <select [(ngModel)]="selectedLineIndexing" class="bg-gray-700 border border-gray-500 p-1 rounded border-box" (change)="onSelectedLineIndexingChange($event)">
         <option value="numbers">Numbers</option>
         <option value="direction">Direction</option>
       </select>
-      
-        
     </div>
+
     <div class="flex flex-row gap-2">
       <select [(ngModel)]="selectedInputFormat" class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onInputFormatChange($event)">
         <option value="riscv">RISCV</option>
@@ -39,6 +39,7 @@
         <option value="hexadecimal">Hexadecimal</option>
       </select>
     </div>
+
     <div class="flex gap-2">
       <select [(ngModel)]="selectedConvertMethod" class="bg-gray-700 border border-gray-500 p-1 rounded border-box" (change)="onSelectedConvertMethod($event)">
         <option value="automatic">Automatic</option>
@@ -55,30 +56,32 @@
 
   @if (showExportWindow) {
     <app-export-window 
-    [initialMemSize]="512"
-    [initialStartAddress]="16"
-    [initialMemoryWidth]="32"
-    [selectedOutputFormat]="selectedOutputFormat()" 
-    (close)="closeExportWindow()" 
-    #exportWindow>
-  </app-export-window>
+      [initialMemSize]="exportInitialMemSize"
+      [initialStartAddress]="exportInitialStartAddress"
+      [initialMemoryWidth]="exportInitialMemoryWidth"
+      [selectedOutputFormat]="selectedOutputFormat()" 
+      (close)="closeExportWindow()" 
+      #exportWindow>
+    </app-export-window>
   }
 
   <!-- INPUT + OUTPUT -->
   <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
+
   @if (showMemoryEditor()) {
     <div class="fixed inset-0 bg-black/20 flex items-center justify-center z-50" (click)="onOutsideClick($event)">
       <app-memory-size-editor
         [sections]="memorySections"
         [memorySize]="memorySize"
         [unit]="memoryUnit"
+        [width]="memoryWidth"
         (update)="onMemoryEditorUpdate($event)"
         (close)="closeMemoryEditor()"
       ></app-memory-size-editor>
     </div>
   }
-  <div class="flex flex-col md:flex-row h-[calc(100%-6.5rem)] p-4 gap-4">
 
+  <div class="flex flex-col md:flex-row h-[calc(100%-6.5rem)] p-4 gap-4">
     <app-text-editor
       (activeLineChange)="onInputActiveLineChange($event)"
       (contentChange)="onEditorChange($event)"
@@ -86,6 +89,7 @@
       [lineIndexing]="selectedLineIndexing()"
       #editor>
     </app-text-editor>
+
     <app-text-editor
       (activeLineChange)="onOutputActiveLineChange($event)"
       [textFormat]="selectedOutputFormat()"
@@ -94,6 +98,7 @@
       #outputTextEditor>
     </app-text-editor>
   </div>
+
   <div class="absolute bottom-2 left-0 w-full flex flex-row gap-2 justify-center z-50">
     @if (selectedConvertMethod() === 'manual') {
       <button (click)="convertInputToOutput()" 
@@ -102,7 +107,5 @@
       </button>
     }
   </div>
-
-
 </main>
 <router-outlet />

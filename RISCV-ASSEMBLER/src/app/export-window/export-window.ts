@@ -223,11 +223,6 @@ endmodule
     this.updateEditorContent();
   }
 
-  onMemoryWidthChange(value: 8 | 32): void {
-    this.memoryWidth.set(value);
-    this.updateEditorContent();
-  }
-
   onSave(): void {
     const content = this.exportedContent;
     if (!content.trim()) {
