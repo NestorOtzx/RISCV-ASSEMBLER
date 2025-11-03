@@ -45,9 +45,25 @@
         <option value="automatic">Automatic</option>
         <option value="manual">Manual</option>
       </select>
-      <button (click)="downloadOutput()" class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded">Download</button>
+      <button
+        (click)="openExportWindow()"
+        class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded"
+      >
+        Export
+      </button>
     </div>
   </div>
+
+  @if (showExportWindow) {
+    <app-export-window 
+    [initialMemSize]="512"
+    [initialStartAddress]="16"
+    [initialMemoryWidth]="32"
+    [selectedOutputFormat]="selectedOutputFormat()" 
+    (close)="closeExportWindow()" 
+    #exportWindow>
+  </app-export-window>
+  }
 
   <!-- INPUT + OUTPUT -->
   <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>

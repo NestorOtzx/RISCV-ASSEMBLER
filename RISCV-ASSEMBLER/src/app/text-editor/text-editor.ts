@@ -8,8 +8,6 @@ import { highlightText } from './utils/highlight-utils';
 import { copy, handlePaste, deleteAll, undo, redo } from './utils/editor-actions';
 import { isValidBinaryInstruction, isValidHexInstruction, isValidRISCVInstruction } from '../assembler/utils';
 
-
-
 @Component({
   selector: 'app-text-editor',
   standalone: true,

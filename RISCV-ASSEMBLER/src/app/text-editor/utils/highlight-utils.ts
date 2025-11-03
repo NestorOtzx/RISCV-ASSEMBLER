@@ -28,7 +28,7 @@ export interface Label {
   line: number;
 }
 
-export function highlightText(editorEl: HTMLElement, labels: Label[], textFormat: 'riscv' | 'binary' | 'hexadecimal' | 'text') {
+export function highlightRiscV(editorEl: HTMLElement, labels: Label[]) {
   const selection = window.getSelection();
   let caretInfo: { divIndex: number; offset: number } | null = null;
   try {
@@ -118,6 +118,21 @@ export function highlightText(editorEl: HTMLElement, labels: Label[], textFormat
       /* ignore */
     }
   }
+}
+
+export function highlightText(editorEl: HTMLElement, labels: Label[], textFormat: 'riscv' | 'binary' | 'hexadecimal' | 'text') {
+  if (textFormat == "text"){
+    
+  }else if (textFormat == "binary"){
+
+  }else if (textFormat == "hexadecimal")
+  {
+
+  }
+  else{
+    highlightRiscV(editorEl, labels)
+  }
+  
 }
 
 // --- helpers ---
