@@ -1,88 +1,102 @@
-name: Angular & E2E Tests
+name: Angular & Playwright CI
 
 on:
   push:
-    branches: [ develop, main, feature-* ]
+    branches: [ main ]
   pull_request:
-    branches: [ develop, main ]
+    branches: [ main ]
 
 jobs:
-  # -------------------- #
-  #  Angular Unit Tests  #
-  # -------------------- #
-  unit-tests:
+  # 🧪 JOB 1: Ejecuta las pruebas unitarias de Angular
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # ✅ 1. Clonar el repositorio
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js
+      # ✅ 2. Configurar Node.js (versión 20, como tu proyecto Angular)
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      # ⚡ 3. Cachear dependencias npm
+      # Esto acelera futuras ejecuciones al reutilizar node_modules y el caché de npm
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          # Carpetas que queremos conservar entre ejecuciones
+          path: |
+            ~/.npm
+            **/node_modules
+          # Clave única del cache: cambia si cambia el package-lock.json
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          # Si no se encuentra la clave exacta, intenta una parcial
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 📦 4. Instalar dependencias del proyecto Angular
       - name: Install dependencies
         working-directory: ./RISCV-ASSEMBLER
         run: npm ci
 
-      - name: Install Chromium
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser
-          export CHROME_BIN=$(which chromium-browser)
-          echo "CHROME_BIN=$CHROME_BIN" >> $GITHUB_ENV
-
+      # 🧠 5. Ejecutar los tests unitarios de Angular
+      # CI=true evita que Angular entre en modo watch
       - name: Run unit tests
         working-directory: ./RISCV-ASSEMBLER
-        run: |
-          CI=true npm run test -- --no-watch --no-progress
+        run: CI=true npm run test -- --no-watch --no-progress
 
-
-  # -------------------- #
-  #     E2E Playwright   #
-  # -------------------- #
+  # 🎭 JOB 2: Ejecuta los tests end-to-end con Playwright
   e2e:
     runs-on: ubuntu-latest
-    needs: unit-tests  # este hace que solo corra si el job "test" pasa exitosamente
+    needs: test # Este job depende del anterior (solo corre si los unit tests pasan)
 
     steps:
-      - name: Checkout repo
+      # ✅ 1. Clonar el repositorio
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      # ✅ 2. Configurar Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Instalar dependencias de Angular (para levantar el servidor)
+      # ⚡ 3. Cachear dependencias npm y navegadores de Playwright
+      # Esto evita tener que descargar Chromium, Firefox o WebKit en cada run
+      - name: Cache Node modules and Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            **/node_modules
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 📦 4. Instalar dependencias del proyecto Angular
       - name: Install Angular dependencies
         working-directory: ./RISCV-ASSEMBLER
         run: npm ci
 
-      # Instalar dependencias de Playwright
+      # 📦 5. Instalar dependencias del proyecto E2E (Playwright)
       - name: Install Playwright dependencies
         working-directory: ./tests-e2e
         run: |
           npm ci
           npx playwright install --with-deps
 
-      # Iniciar el servidor Angular en segundo plano
+      # 🚀 6. Iniciar el servidor de Angular (modo background)
       - name: Start Angular app
         working-directory: ./RISCV-ASSEMBLER
         run: |
           npm run start -- --port 4200 &
           npx wait-on http://localhost:4200
 
-      # Ejecutar las pruebas E2E
+      # 🎭 7. Ejecutar los tests end-to-end de Playwright
       - name: Run Playwright tests
         working-directory: ./tests-e2e
-        run: npx playwright test --project=chromium
-
-      # Subir reporte de Playwright (útil si hay fallos)
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: tests-e2e/playwright-report/
+        run: npx playwright test
