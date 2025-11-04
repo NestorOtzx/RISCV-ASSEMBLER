@@ -1,4 +1,4 @@
-name: Angular Tests
+name: Angular & E2E Tests
 
 on:
   push:
@@ -7,7 +7,10 @@ on:
     branches: [ develop, main ]
 
 jobs:
-  test:
+  # -------------------- #
+  #  Angular Unit Tests  #
+  # -------------------- #
+  unit-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,9 +23,8 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: |
-          cd RISCV-ASSEMBLER
-          npm ci
+        working-directory: ./RISCV-ASSEMBLER
+        run: npm ci
 
       - name: Install Chromium
         run: |
@@ -32,6 +34,55 @@ jobs:
           echo "CHROME_BIN=$CHROME_BIN" >> $GITHUB_ENV
 
       - name: Run unit tests
+        working-directory: ./RISCV-ASSEMBLER
         run: |
-          cd RISCV-ASSEMBLER
           CI=true npm run test -- --no-watch --no-progress
+
+
+  # -------------------- #
+  #     E2E Playwright   #
+  # -------------------- #
+  e2e:
+    runs-on: ubuntu-latest
+    needs: unit-tests  # este hace que solo corra si el job "test" pasa exitosamente
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Instalar dependencias de Angular (para levantar el servidor)
+      - name: Install Angular dependencies
+        working-directory: ./RISCV-ASSEMBLER
+        run: npm ci
+
+      # Instalar dependencias de Playwright
+      - name: Install Playwright dependencies
+        working-directory: ./tests-e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      # Iniciar el servidor Angular en segundo plano
+      - name: Start Angular app
+        working-directory: ./RISCV-ASSEMBLER
+        run: |
+          npm run start -- --port 4200 &
+          npx wait-on http://localhost:4200
+
+      # Ejecutar las pruebas E2E
+      - name: Run Playwright tests
+        working-directory: ./tests-e2e
+        run: npx playwright test --project=chromium
+
+      # Subir reporte de Playwright (útil si hay fallos)
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: tests-e2e/playwright-report/
