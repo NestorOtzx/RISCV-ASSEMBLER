@@ -18,6 +18,11 @@
   <!-- Contenido -->
   <div class="flex-1 p-4 overflow-y-auto space-y-6">
       <!-- ===================== Memory Width ===================== -->
+  <div class="memory-controls flex gap-3">
+    <button class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded" type="button" (click)="triggerImport()">Import</button>
+    <button class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded" type="button" (click)="exportConfiguration()">Exportar</button>
+    <input type="file" #fileInput accept=".json" (change)="importConfiguration($event)" hidden>
+  </div>
   <div class="bg-slate-700 p-3 rounded-lg border border-slate-600">
     <h3 class="font-semibold mb-2 text-gray-100">Memory Width</h3>
 
@@ -142,6 +147,14 @@
         }
       </div>
     </div>
+
+    <div class="flex justify-end mt-3">
+      <button
+        (click)="resetDefaults()"
+        class="bg-red-500 hover:bg-yellow-700 px-3 py-1 rounded">
+        Reset Defaults
+      </button>
+    </div>
   </div>
 
   <!-- Botón lateral visible SOLO en pantallas medianas/grandes -->
@@ -151,4 +164,7 @@
            bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 shadow-lg transition rounded-r-md">
     ⮜
   </button>
+
+  
+
 </div>
