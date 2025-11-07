@@ -126,6 +126,8 @@
       data-testid="text-editor-input"
       (activeLineChange)="onInputActiveLineChange($event)"
       (contentChange)="onEditorChange($event)"
+      [lineStartValue]="memorySections[0].end/(memoryWidth/8)"
+      [lineStepValue]="32/memoryWidth"
       [textFormat]="selectedInputFormat()"
       [lineIndexing]="selectedLineIndexing()"
       #editor>
@@ -134,6 +136,8 @@
     <app-text-editor
       data-testid="text-editor-output"
       (activeLineChange)="onOutputActiveLineChange($event)"
+      [lineStartValue]="memorySections[0].end/(memoryWidth/8)"
+      [lineStepValue]="32/memoryWidth"
       [textFormat]="selectedOutputFormat()"
       [lineIndexing]="selectedLineIndexing()"
       [editable]="false"

@@ -19,6 +19,8 @@ export class TextEditor implements AfterViewInit {
   
   private _lineIndexing: 'numbers' | 'direction' = 'numbers';
   private _textFormat: 'riscv' | 'binary' | 'hexadecimal' | 'text' = 'text';
+  private _lineStartValue: number = 1;
+  private _lineStepValue: number = 4;
 
   @Input()
   set lineIndexing(value: 'numbers' | 'direction') {
@@ -31,6 +33,24 @@ export class TextEditor implements AfterViewInit {
   set textFormat(value: 'riscv' | 'binary' | 'hexadecimal' | 'text') {
     this._textFormat = value;
     // recalcula inmediatamente cuando cambia
+    if (this.editor) {
+      const { text } = extractContentAndLabels(this.editor.nativeElement);
+      this.updateLineCounter(text);
+    }
+  }
+  @Input()
+  set lineStepValue(value: number)
+  {
+    this._lineStepValue = value;
+    if (this.editor) {
+      const { text } = extractContentAndLabels(this.editor.nativeElement);
+      this.updateLineCounter(text);
+    }
+  }
+
+  @Input()
+  set lineStartValue(value: number){
+    this._lineStartValue = value;
     if (this.editor) {
       const { text } = extractContentAndLabels(this.editor.nativeElement);
       this.updateLineCounter(text);
@@ -135,7 +155,7 @@ export class TextEditor implements AfterViewInit {
 
   getLineIndex(lineNumber: number): string {
     if (this.lineIndexing === 'direction') {
-      const address = (0x0000 + lineNumber * 4).toString(16).toUpperCase();
+      const address = (this._lineStartValue + ((lineNumber-1) * this._lineStepValue)).toString(16).toUpperCase();
       return '0x' + address.padStart(4, '0');
     }
     return lineNumber.toString();
