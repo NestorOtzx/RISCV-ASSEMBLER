@@ -3,6 +3,7 @@ import { registerToBinary, parseImmediate } from '../utils';
 
 export function assembleJTypeProgressive(
   instruction: string,
+  memoryWidth: 8 | 32,
   labelMap?: Record<string, number>,
   currentAddress?: number
 ): string | null {
@@ -47,7 +48,7 @@ export function assembleJTypeProgressive(
   return finalBin.padStart(32, immVal < 0 ? '1' : '0');
 }
 
-export function decodeJTypeProgressive(binary: string): string | null {
+export function decodeJTypeProgressive(binary: string, memoryWidth: 8 | 32): string | null {
   if (!binary || binary.length < 32) return null;
   const padded = binary.padStart(32, '0');
 

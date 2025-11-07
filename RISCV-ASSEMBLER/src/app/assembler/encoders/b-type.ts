@@ -5,8 +5,9 @@ import { registerToBinary, parseImmediate} from '../utils';
 
 export function assembleBTypeProgressive(
   instruction: string,
+  memoryWidth: 8 | 32,
   labelMap?: Record<string, number>,
-  currentAddress?: number
+  currentAddress?: number,
 ): string | null {
   const tokens = instruction.trim().split(/[\s,()]+/);
   const mnemonic = tokens[0];
@@ -43,7 +44,7 @@ export function assembleBTypeProgressive(
 }
 
 
-export function decodeBTypeProgressive(binary: string): string | null {
+export function decodeBTypeProgressive(binary: string, memoryWidth: 8 | 32): string | null {
   if (!binary || binary.length === 0) return null;
   const padded = binary.padStart(32, '0');
 
