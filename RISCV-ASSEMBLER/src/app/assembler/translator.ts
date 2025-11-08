@@ -16,7 +16,7 @@ export type TranslationResult = {
 };
 
   
-export function RiscVToBinary(lines: string[]): TranslationResult {
+export function RiscVToBinary(lines: string[], memoryWidth: 8 | 32): TranslationResult {
   const output: string[] = [];
   const labelMap: Record<string, number> = {};
   const pendingBranches: { lineIndex: number; instruction: string }[] = [];
@@ -67,10 +67,10 @@ export function RiscVToBinary(lines: string[]): TranslationResult {
       assembleRTypeProgressive(trimmed) ||
       assembleITypeProgressive(trimmed) ||
       assembleSTypeProgressive(trimmed) ||
-      assembleBTypeProgressive(trimmed) || // provisional
+      assembleBTypeProgressive(trimmed, memoryWidth) || // provisional
       assembleSpecialITypeProgressive(trimmed) ||
       assembleUTypeProgressive(trimmed) ||
-      assembleJTypeProgressive(trimmed);
+      assembleJTypeProgressive(trimmed, memoryWidth);
 
     if (!binary) {
       errors.push({ line: i + 1, message: 'Invalid instruction' });
@@ -101,9 +101,9 @@ export function RiscVToBinary(lines: string[]): TranslationResult {
     let resolved: string | null = null;
 
     if (mnemonic in bInstructions) {
-      resolved = assembleBTypeProgressive(instruction, labelMap, outputIndex);
+      resolved = assembleBTypeProgressive(instruction, memoryWidth, labelMap, outputIndex);
     } else if (mnemonic in jInstructions) {
-      resolved = assembleJTypeProgressive(instruction, labelMap, outputIndex);
+      resolved = assembleJTypeProgressive(instruction, memoryWidth, labelMap, outputIndex);
     }
 
     if (!resolved) {
@@ -118,7 +118,7 @@ export function RiscVToBinary(lines: string[]): TranslationResult {
 }
 
 
-export function BinaryToRiscV(lines: string[]): TranslationResult {
+export function BinaryToRiscV(lines: string[], memoryWidth: 8 | 32): TranslationResult {
   const output: string[] = [];
   const labelMap: Record<string, number> = {};
   const errors: { line: number; message: string }[] = [];
@@ -152,10 +152,10 @@ export function BinaryToRiscV(lines: string[]): TranslationResult {
       decodeRTypeProgressive(trimmed) ||
       decodeITypeProgressive(trimmed) ||
       decodeSTypeProgressive(trimmed) ||
-      decodeBTypeProgressive(trimmed) ||
+      decodeBTypeProgressive(trimmed, memoryWidth) ||
       decodeSpecialITypeProgressive(trimmed) ||
       decodeUTypeProgressive(trimmed) ||
-      decodeJTypeProgressive(trimmed);
+      decodeJTypeProgressive(trimmed, memoryWidth);
 
     if (!decoded) {
       errors.push({ line: i + 1, message: 'Invalid or incomplete binary instruction' });
@@ -235,7 +235,7 @@ export function HexToBinary(lines: string[]): TranslationResult {
 }
 
 // 🔁 RISC-V → RISC-V (normalización progresiva)
-export function RiscVToRiscV(lines: string[]): TranslationResult {
+export function RiscVToRiscV(lines: string[], memoryWidth: 8 | 32): TranslationResult {
   const output: string[] = [];
   const labelMap: Record<string, number> = {};
   const errors: { line: number; message: string }[] = [];
@@ -269,10 +269,10 @@ export function RiscVToRiscV(lines: string[]): TranslationResult {
       assembleRTypeProgressive(trimmed) ||
       assembleITypeProgressive(trimmed) ||
       assembleSTypeProgressive(trimmed) ||
-      assembleBTypeProgressive(trimmed) ||
+      assembleBTypeProgressive(trimmed, memoryWidth) ||
       assembleSpecialITypeProgressive(trimmed) ||
       assembleUTypeProgressive(trimmed) ||
-      assembleJTypeProgressive(trimmed);
+      assembleJTypeProgressive(trimmed, memoryWidth);
 
     if (!binary) {
       errors.push({ line: i + 1, message: 'Invalid RISC-V instruction' });
@@ -284,10 +284,10 @@ export function RiscVToRiscV(lines: string[]): TranslationResult {
       decodeRTypeProgressive(binary) ||
       decodeITypeProgressive(binary) ||
       decodeSTypeProgressive(binary) ||
-      decodeBTypeProgressive(binary) ||
+      decodeBTypeProgressive(binary, memoryWidth) ||
       decodeSpecialITypeProgressive(binary) ||
       decodeUTypeProgressive(binary) ||
-      decodeJTypeProgressive(binary);
+      decodeJTypeProgressive(binary, memoryWidth);
 
     if (!decoded) {
       errors.push({ line: i + 1, message: 'Could not normalize instruction' });
@@ -307,7 +307,7 @@ export function RiscVToRiscV(lines: string[]): TranslationResult {
 
 
 // 🔁 Binario → Binario (normalización progresiva)
-export function BinaryToBinary(lines: string[]): TranslationResult {
+export function BinaryToBinary(lines: string[], memoryWidth: 8 | 32): TranslationResult {
   const output: string[] = [];
   const errors: { line: number; message: string }[] = [];
   const editorToOutput: number[] = [];
@@ -325,10 +325,10 @@ export function BinaryToBinary(lines: string[]): TranslationResult {
       decodeRTypeProgressive(trimmed) ||
       decodeITypeProgressive(trimmed) ||
       decodeSTypeProgressive(trimmed) ||
-      decodeBTypeProgressive(trimmed) ||
+      decodeBTypeProgressive(trimmed, memoryWidth) ||
       decodeSpecialITypeProgressive(trimmed) ||
       decodeUTypeProgressive(trimmed) ||
-      decodeJTypeProgressive(trimmed);
+      decodeJTypeProgressive(trimmed, memoryWidth);
 
     if (!decoded) {
       errors.push({ line: i + 1, message: 'Invalid or incomplete binary instruction' });
@@ -341,10 +341,10 @@ export function BinaryToBinary(lines: string[]): TranslationResult {
       assembleRTypeProgressive(decoded) ||
       assembleITypeProgressive(decoded) ||
       assembleSTypeProgressive(decoded) ||
-      assembleBTypeProgressive(decoded) ||
+      assembleBTypeProgressive(decoded, memoryWidth) ||
       assembleSpecialITypeProgressive(decoded) ||
       assembleUTypeProgressive(decoded) ||
-      assembleJTypeProgressive(decoded);
+      assembleJTypeProgressive(decoded, memoryWidth);
 
     if (!reassembled) {
       errors.push({ line: i + 1, message: 'Could not reassemble binary instruction' });
@@ -363,7 +363,7 @@ export function BinaryToBinary(lines: string[]): TranslationResult {
 
 
 // 🔁 Hexadecimal → Hexadecimal (normalización progresiva)
-export function HexToHex(lines: string[]): TranslationResult {
+export function HexToHex(lines: string[], memoryWidth: 8 | 32): TranslationResult {
   const output: string[] = [];
   const errors: { line: number; message: string }[] = [];
   const editorToOutput: number[] = [];
@@ -385,10 +385,10 @@ export function HexToHex(lines: string[]): TranslationResult {
         decodeRTypeProgressive(binary) ||
         decodeITypeProgressive(binary) ||
         decodeSTypeProgressive(binary) ||
-        decodeBTypeProgressive(binary) ||
+        decodeBTypeProgressive(binary, memoryWidth) ||
         decodeSpecialITypeProgressive(binary) ||
         decodeUTypeProgressive(binary) ||
-        decodeJTypeProgressive(binary);
+        decodeJTypeProgressive(binary, memoryWidth);
 
       if (!decoded) {
         errors.push({ line: i + 1, message: 'Invalid or incomplete hex instruction' });
@@ -401,10 +401,10 @@ export function HexToHex(lines: string[]): TranslationResult {
         assembleRTypeProgressive(decoded) ||
         assembleITypeProgressive(decoded) ||
         assembleSTypeProgressive(decoded) ||
-        assembleBTypeProgressive(decoded) ||
+        assembleBTypeProgressive(decoded, memoryWidth) ||
         assembleSpecialITypeProgressive(decoded) ||
         assembleUTypeProgressive(decoded) ||
-        assembleJTypeProgressive(decoded);
+        assembleJTypeProgressive(decoded, memoryWidth);
 
       if (!reassembled) {
         errors.push({ line: i + 1, message: 'Could not reassemble hex instruction' });

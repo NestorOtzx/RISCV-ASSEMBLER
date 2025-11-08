@@ -117,12 +117,12 @@ endmodule
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const source = this.selectedOutputFormat;
 
-    if (source === 'binary' && inputFormat === 'binary') return BinaryToBinary(lines).output;
+    if (source === 'binary' && inputFormat === 'binary') return BinaryToBinary(lines, this.memoryWidth()).output;
     if (source === 'binary' && inputFormat === 'hexadecimal') return BinaryToHex(lines).output;
     if (source === 'hexadecimal' && inputFormat === 'binary') return HexToBinary(lines).output;
-    if (source === 'hexadecimal' && inputFormat === 'hexadecimal') return HexToHex(lines).output;
-    if (source === 'riscv' && inputFormat === 'binary') return RiscVToBinary(lines).output;
-    if (source === 'riscv' && inputFormat === 'hexadecimal') return BinaryToHex(RiscVToBinary(lines).output).output;
+    if (source === 'hexadecimal' && inputFormat === 'hexadecimal') return HexToHex(lines, this.memoryWidth()).output;
+    if (source === 'riscv' && inputFormat === 'binary') return RiscVToBinary(lines, this.memoryWidth()).output;
+    if (source === 'riscv' && inputFormat === 'hexadecimal') return BinaryToHex(RiscVToBinary(lines, this.memoryWidth()).output).output;
 
     return lines;
   }

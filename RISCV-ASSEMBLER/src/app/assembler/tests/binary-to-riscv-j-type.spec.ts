@@ -12,7 +12,7 @@ describe('BinaryToRiscV J-Type Instructions', () => {
 
   for (const [expected, binary] of cases) {
     it(`decodes "${binary}" correctly`, () => {
-      const result = BinaryToRiscV([binary]);
+      const result = BinaryToRiscV([binary], 8);
       const output = result.output[0];
 
       // Normalizamos para evitar falsos negativos por registros o inmediatos equivalentes

@@ -20,7 +20,7 @@
       <!-- ===================== Memory Width ===================== -->
   <div class="memory-controls flex gap-3">
     <button class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded" type="button" (click)="triggerImport()">Import</button>
-    <button class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded" type="button" (click)="exportConfiguration()">Exportar</button>
+    <button class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded" type="button" (click)="exportConfiguration()">Export</button>
     <input type="file" #fileInput accept=".json" (change)="importConfiguration($event)" hidden>
   </div>
   <div class="bg-slate-700 p-3 rounded-lg border border-slate-600">

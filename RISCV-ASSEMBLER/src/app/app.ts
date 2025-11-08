@@ -82,6 +82,9 @@ export class App {
         // ignore
       }
     }
+
+
+    this.convertInputToOutput();
   }
 
   toggleMemoryEditor() {
@@ -108,32 +111,40 @@ export class App {
   {
     console.log("convert text to format from:"+from_format + " to: "+to_format);
     let result: TranslationResult | null;
+    let memoryWidthTyped: 8 | 32;
+    if (this.memoryWidth == 32)
+    {
+      memoryWidthTyped = 32;
+    }else{
+      memoryWidthTyped = 8;
+    }
+
     if (from_format == 'binary' && to_format == 'binary')
     {
-      result = BinaryToBinary(lines);
+      result = BinaryToBinary(lines, memoryWidthTyped);
     }
     else if (from_format == 'riscv' && to_format == 'riscv')
     {
-      result = RiscVToRiscV(lines);
+      result = RiscVToRiscV(lines, memoryWidthTyped);
     }else if (from_format == 'hexadecimal' && to_format == 'hexadecimal'){
-      result = HexToHex(lines);
+      result = HexToHex(lines, memoryWidthTyped);
     }
     else if (from_format == 'binary' && to_format == 'riscv')
     {
-      result = BinaryToRiscV(lines);
+      result = BinaryToRiscV(lines, memoryWidthTyped);
     }
     else if (from_format == 'binary' && to_format == 'hexadecimal')
     {
       result = BinaryToHex(lines);
     }
     else if (from_format == 'hexadecimal' && to_format == 'riscv'){
-      result = BinaryToRiscV(HexToBinary(lines).output);
+      result = BinaryToRiscV(HexToBinary(lines).output, memoryWidthTyped);
     }else if (from_format == 'hexadecimal' && to_format == 'binary'){
       result = HexToBinary(lines);
     }else if (from_format == 'riscv' && to_format == 'binary'){
-      result = RiscVToBinary(lines);
+      result = RiscVToBinary(lines, memoryWidthTyped);
     }else if (from_format == 'riscv' && to_format == 'hexadecimal'){
-      result = BinaryToHex(RiscVToBinary(lines).output);
+      result = BinaryToHex(RiscVToBinary(lines, memoryWidthTyped).output);
     }
     else{
       result = NoConversion(lines);
@@ -142,8 +153,8 @@ export class App {
   }
 
   get exportInitialMemoryWidth(): 8 | 32 {
-  return this.memoryWidth === 32 ? 32 : 8;
-}
+    return this.memoryWidth === 32 ? 32 : 8;
+  }
 
     /**
    * Tamaño direccionable lógico (número de direcciones) que pasaremos a ExportWindow.

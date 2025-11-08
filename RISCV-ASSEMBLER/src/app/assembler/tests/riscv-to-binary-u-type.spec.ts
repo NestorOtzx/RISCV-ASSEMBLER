@@ -14,7 +14,7 @@ describe('RiscVToBinary U-Type Instructions', () => {
   ];
   for (const [instruction, expected] of cases) {
     it(`encodes "${instruction}" correctly`, () => {
-      const result = RiscVToBinary([instruction]);
+      const result = RiscVToBinary([instruction], 8);
       const output = result.output[0];
 
       expect(normalizeRegisters(normalizeImmediates(output))).toBe(expected);
