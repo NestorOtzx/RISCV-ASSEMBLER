@@ -82,6 +82,9 @@ export class App {
         // ignore
       }
     }
+
+
+    this.convertInputToOutput();
   }
 
   toggleMemoryEditor() {
@@ -150,8 +153,8 @@ export class App {
   }
 
   get exportInitialMemoryWidth(): 8 | 32 {
-  return this.memoryWidth === 32 ? 32 : 8;
-}
+    return this.memoryWidth === 32 ? 32 : 8;
+  }
 
     /**
    * Tamaño direccionable lógico (número de direcciones) que pasaremos a ExportWindow.

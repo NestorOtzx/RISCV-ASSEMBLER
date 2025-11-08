@@ -14,7 +14,7 @@ describe('BinaryToRiscV U-Type Instructions', () => {
   ];
   for (const [expected, binary] of cases) {
     it(`decodes "${binary}" correctly`, () => {
-      const result = BinaryToRiscV([binary]);
+      const result = BinaryToRiscV([binary], 8);
       const output = normalizeRegisters(normalizeImmediates(result.output[0]));
 
       expect(output).toBe(normalizeRegisters(normalizeImmediates(expected)));

@@ -20,7 +20,7 @@ describe('BinaryToRiscV B-Type Instructions', () => {
 
   for (const [expectedInstruction, binary] of cases) {
     it(`decodes "${binary}" correctly`, () => {
-      const result = BinaryToRiscV([binary]);
+      const result = BinaryToRiscV([binary], 8);
       const normalizedExpected = normalizeImmediates(normalizeRegisters(expectedInstruction));
       const normalizedResult = normalizeImmediates(normalizeRegisters(result.output[0]));
 

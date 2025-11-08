@@ -31,7 +31,7 @@ describe('RiscVToBinary I-Type Instructions', () => {
   ];
   for (const [instruction, expected] of cases) {
     it(`encodes "${instruction}" correctly`, () => {
-      const result = RiscVToBinary([instruction]);
+      const result = RiscVToBinary([instruction], 8);
       expect(result.output[0]).toBe(expected);
       expect(result.errors.length).toBe(0);
     });
