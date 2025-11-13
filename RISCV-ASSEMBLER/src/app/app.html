@@ -1,71 +1,160 @@
 <main class="h-screen bg-gray-900 text-white">
-  <nav class="w-full bg-blue-600 flex items-center justify-center h-12 text-lg font-semibold">
-    RISCV-Assembler
+  <nav class="w-full bg-blue-600 flex items-center justify-between h-12 text-lg font-semibold">
+    <div>
+      <button
+        data-testid="btn-toggle-memory-editor"
+        (click)="toggleMemoryEditor()"
+        class="p-2 hover:bg-gray-700 rounded">
+        <span class="text-2xl leading-none">☰</span>
+      </button>
+    </div>
+    <div data-testid="nav-title">
+      RISCV-Assembler
+    </div>
+    <div></div>
   </nav>
 
   <!-- TOOLBAR -->
   <div class="flex flex-wrap justify-between items-center p-2 gap-2">
     <div class="flex flex-row gap-2">
-      <button (click)="fileInput.click()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Import</button>
-      <select [(ngModel)]="selectedLineIndexing" class="bg-gray-700 border border-gray-500 p-1 rounded border-box" (change)="onSelectedLineIndexingChange($event)">
+      <!-- Usamos la función del componente para abrir el file picker -->
+      <button
+        data-testid="btn-import"
+        (click)="onImportFile()"
+        class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">
+        Import
+      </button>
+
+      <select
+        data-testid="select-line-indexing"
+        [(ngModel)]="selectedLineIndexing"
+        class="bg-gray-700 border border-gray-500 p-1 rounded border-box"
+        (change)="onSelectedLineIndexingChange($event)">
         <option value="numbers">Numbers</option>
         <option value="direction">Direction</option>
       </select>
-      
-        
     </div>
+
     <div class="flex flex-row gap-2">
-      <select [(ngModel)]="selectedInputFormat" class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onInputFormatChange($event)">
+      <select
+        data-testid="select-input-format"
+        [(ngModel)]="selectedInputFormat"
+        class="bg-gray-700 border border-gray-500 p-1 rounded"
+        (change)="onInputFormatChange($event)">
         <option value="riscv">RISCV</option>
         <option value="binary">Binary</option>
         <option value="hexadecimal">Hexadecimal</option>
       </select>
-      <button (click)="switchFormats()" class="bg-gray-700 border border-gray-500 p-1 px-2 rounded flex justify-center items-center">
+
+      <button
+        data-testid="btn-switch-formats"
+        (click)="switchFormats()"
+        class="bg-gray-700 border border-gray-500 p-1 px-2 rounded flex justify-center items-center">
         <span class="-mt-[3px]">↔</span>
       </button>
-      <select [(ngModel)]="selectedOutputFormat" class="bg-gray-700 border border-gray-500 p-1 rounded" (change)="onOutputFormatChange($event)">
+
+      <select
+        data-testid="select-output-format"
+        [(ngModel)]="selectedOutputFormat"
+        class="bg-gray-700 border border-gray-500 p-1 rounded"
+        (change)="onOutputFormatChange($event)">
         <option value="binary">Binary</option>
         <option value="riscv">RISCV</option>
         <option value="hexadecimal">Hexadecimal</option>
       </select>
     </div>
+
     <div class="flex gap-2">
-      <select [(ngModel)]="selectedConvertMethod" class="bg-gray-700 border border-gray-500 p-1 rounded border-box" (change)="onSelectedConvertMethod($event)">
+      <select
+        data-testid="select-convert-method"
+        [(ngModel)]="selectedConvertMethod"
+        class="bg-gray-700 border border-gray-500 p-1 rounded border-box"
+        (change)="onSelectedConvertMethod($event)">
         <option value="automatic">Automatic</option>
         <option value="manual">Manual</option>
       </select>
-      <button (click)="downloadOutput()" class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded">Download</button>
+
+      <button
+        data-testid="btn-export"
+        (click)="openExportWindow()"
+        class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded">
+        Export
+      </button>
     </div>
   </div>
 
+  @if (showExportWindow) {
+    <app-export-window
+      data-testid="export-window"
+      [initialMemSize]="exportInitialMemSize"
+      [initialStartAddress]="exportInitialStartAddress"
+      [initialMemoryWidth]="exportInitialMemoryWidth"
+      [selectedOutputFormat]="selectedOutputFormat()"
+      (close)="closeExportWindow()"
+      #exportWindow>
+    </app-export-window>
+  }
+
   <!-- INPUT + OUTPUT -->
-    <input type="file" #fileInput accept=".s,.asm,.txt" (change)="onFileSelected($event)" hidden>
+  <input
+    type="file"
+    #fileInput
+    accept=".s,.asm,.txt"
+    (change)="onFileSelected($event)"
+    hidden
+    data-testid="file-input">
+
+  @if (showMemoryEditor()) {
+    <div
+      class="fixed inset-0 bg-black/20 flex items-center justify-center z-50"
+      (click)="onOutsideClick($event)"
+      data-testid="memory-editor-overlay">
+      <app-memory-size-editor
+        data-testid="memory-size-editor"
+        [sections]="memorySections"
+        [memorySize]="memorySize"
+        [unit]="memoryUnit"
+        [width]="memoryWidth"
+        (update)="onMemoryEditorUpdate($event)"
+        (close)="closeMemoryEditor()">
+      </app-memory-size-editor>
+    </div>
+  }
 
   <div class="flex flex-col md:flex-row h-[calc(100%-6.5rem)] p-4 gap-4">
     <app-text-editor
+      data-testid="text-editor-input"
       (activeLineChange)="onInputActiveLineChange($event)"
       (contentChange)="onEditorChange($event)"
+      [lineStartValue]="memorySections[0].end/(memoryWidth/8)"
+      [lineStepValue]="32/memoryWidth"
       [textFormat]="selectedInputFormat()"
       [lineIndexing]="selectedLineIndexing()"
       #editor>
     </app-text-editor>
+
     <app-text-editor
+      data-testid="text-editor-output"
       (activeLineChange)="onOutputActiveLineChange($event)"
+      [lineStartValue]="memorySections[0].end/(memoryWidth/8)"
+      [lineStepValue]="32/memoryWidth"
       [textFormat]="selectedOutputFormat()"
       [lineIndexing]="selectedLineIndexing()"
-      [editable]=false
+      [editable]="false"
       #outputTextEditor>
     </app-text-editor>
   </div>
+
   <div class="absolute bottom-2 left-0 w-full flex flex-row gap-2 justify-center z-50">
     @if (selectedConvertMethod() === 'manual') {
-      <button (click)="convertInputToOutput()" 
-              class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded shadow-lg">
+      <button
+        data-testid="btn-convert"
+        (click)="convertInputToOutput()"
+        class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded shadow-lg">
         Convert
       </button>
     }
   </div>
-
-
 </main>
+
 <router-outlet />
