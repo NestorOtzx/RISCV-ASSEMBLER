@@ -9,7 +9,7 @@ process.env.CHROME_BIN =
 module.exports = function (config) {
   config.set({
     basePath: '',
-    frameworks: ['jasmine'],
+    frameworks: ['jasmine', '@angular-devkit/build-angular'],
 
     plugins: [
       require('karma-jasmine'),
