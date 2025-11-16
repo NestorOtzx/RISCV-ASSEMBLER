@@ -437,126 +437,126 @@ export class MemorySizeEditor implements OnInit, OnChanges {
   }
 
   exportConfiguration() {
-  // Export sections as bytes (end_in_bytes), plus physical memory size, unit and width
-  const bytesPerAddr = this.bytesPerAddress;
-  const data = {
-    memorySections: this.memorySections.map(section => ({
-      name: section.name,
-      end: section.end * bytesPerAddr // convert logical end -> bytes
-    })),
-    memorySize: this.physicalSizeBytes, // physical size in bytes
-    memoryUnit: this.memoryUnit,
-    memoryWidth: this.memoryWidth // 8 or 32
-  };
+    // Export sections as bytes (end_in_bytes), plus physical memory size, unit and width
+    const bytesPerAddr = this.bytesPerAddress;
+    const data = {
+      memorySections: this.memorySections.map(section => ({
+        name: section.name,
+        end: section.end * bytesPerAddr // convert logical end -> bytes
+      })),
+      memorySize: this.physicalSizeBytes, // physical size in bytes
+      memoryUnit: this.memoryUnit,
+      memoryWidth: this.memoryWidth // 8 or 32
+    };
 
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
 
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'memory-config.json';
-  a.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'memory-config.json';
+    a.click();
 
-  URL.revokeObjectURL(url);
-}
+    URL.revokeObjectURL(url);
+  }
 
-triggerImport() {
-  this.fileInput.nativeElement.click();
-}
+  triggerImport() {
+    this.fileInput.nativeElement.click();
+  }
 
-importConfiguration(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (!input.files || input.files.length === 0) return;
+  importConfiguration(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
 
-  const file = input.files[0];
-  const reader = new FileReader();
+    const file = input.files[0];
+    const reader = new FileReader();
 
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result as string);
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result as string);
 
-      if (!Array.isArray(data.memorySections)) {
-        alert('Invalid or corrupted configuration file.');
-        return;
-      }
-
-      let updated = false;
-
-      // --- If memoryWidth present and valid, apply it first ---
-      if (typeof data.memoryWidth === 'number' && (data.memoryWidth === 8 || data.memoryWidth === 32)) {
-        // If width changes, update memoryWidth and bytesPerAddress will change accordingly
-        if (this.memoryWidth !== data.memoryWidth) {
-          this.memoryWidth = data.memoryWidth;
-          updated = true;
+        if (!Array.isArray(data.memorySections)) {
+          alert('Invalid or corrupted configuration file.');
+          return;
         }
-      }
 
-      // --- If memorySize (physical bytes) present, apply it ---
-      if (typeof data.memorySize === 'number' && data.memorySize > 0) {
-        if (this.physicalSizeBytes !== data.memorySize) {
-          this.physicalSizeBytes = data.memorySize;
-          updated = true;
-        }
-      }
+        let updated = false;
 
-      // --- If memoryUnit present and valid, apply ---
-      if (typeof data.memoryUnit === 'string' && ['B', 'KB', 'MB', 'GB', 'HEX'].includes(data.memoryUnit)) {
-        if (this.memoryUnit !== data.memoryUnit) {
-          this.memoryUnit = data.memoryUnit;
-          updated = true;
-        }
-      }
-
-      // Recompute logical size and input display after possibly changing width/physicalSize/unit
-      const bytesPerAddr = this.bytesPerAddress;
-      this.memorySize = Math.floor(this.physicalSizeBytes / (bytesPerAddr || 1));
-      this.memorySizeInput = this.convertBytesToUnit(this.physicalSizeBytes, this.memoryUnit);
-
-      // --- Update sections: imported ends are expected in BYTES ---
-      for (const imported of data.memorySections) {
-        if (typeof imported.name !== 'string' || typeof imported.end !== 'number') continue;
-
-        const existing = this.memorySections.find(s => s.name === imported.name);
-        if (existing && existing.editable) {
-          // convert imported end (bytes) -> logical addresses
-          const newEndLogical = Math.floor(imported.end / (bytesPerAddr || 1));
-          if (existing.end !== newEndLogical) {
-            existing.end = newEndLogical;
+        // --- If memoryWidth present and valid, apply it first ---
+        if (typeof data.memoryWidth === 'number' && (data.memoryWidth === 8 || data.memoryWidth === 32)) {
+          // If width changes, update memoryWidth and bytesPerAddress will change accordingly
+          if (this.memoryWidth !== data.memoryWidth) {
+            this.memoryWidth = data.memoryWidth;
             updated = true;
           }
         }
-      }
 
-      // Ensure last section exactly ends at memorySize
-      if (this.memorySections.length > 0) {
-        const lastIdx = this.memorySections.length - 1;
-        if (this.memorySections[lastIdx].end !== this.memorySize) {
-          this.memorySections[lastIdx].end = this.memorySize;
-          // no need to mark 'updated' again if already true, but keep consistent
+        // --- If memorySize (physical bytes) present, apply it ---
+        if (typeof data.memorySize === 'number' && data.memorySize > 0) {
+          if (this.physicalSizeBytes !== data.memorySize) {
+            this.physicalSizeBytes = data.memorySize;
+            updated = true;
+          }
         }
+
+        // --- If memoryUnit present and valid, apply ---
+        if (typeof data.memoryUnit === 'string' && ['B', 'KB', 'MB', 'GB', 'HEX'].includes(data.memoryUnit)) {
+          if (this.memoryUnit !== data.memoryUnit) {
+            this.memoryUnit = data.memoryUnit;
+            updated = true;
+          }
+        }
+
+        // Recompute logical size and input display after possibly changing width/physicalSize/unit
+        const bytesPerAddr = this.bytesPerAddress;
+        this.memorySize = Math.floor(this.physicalSizeBytes / (bytesPerAddr || 1));
+        this.memorySizeInput = this.convertBytesToUnit(this.physicalSizeBytes, this.memoryUnit);
+
+        // --- Update sections: imported ends are expected in BYTES ---
+        for (const imported of data.memorySections) {
+          if (typeof imported.name !== 'string' || typeof imported.end !== 'number') continue;
+
+          const existing = this.memorySections.find(s => s.name === imported.name);
+          if (existing && existing.editable) {
+            // convert imported end (bytes) -> logical addresses
+            const newEndLogical = Math.floor(imported.end / (bytesPerAddr || 1));
+            if (existing.end !== newEndLogical) {
+              existing.end = newEndLogical;
+              updated = true;
+            }
+          }
+        }
+
+        // Ensure last section exactly ends at memorySize
+        if (this.memorySections.length > 0) {
+          const lastIdx = this.memorySections.length - 1;
+          if (this.memorySections[lastIdx].end !== this.memorySize) {
+            this.memorySections[lastIdx].end = this.memorySize;
+            // no need to mark 'updated' again if already true, but keep consistent
+          }
+        }
+
+        // Validate sections and emit if something changed
+        const valid = this.validateSections(this.memorySections, this.memorySize);
+        if (updated) {
+          // Emit converted sections in BYTES via this.emit()
+          this.emit();
+          alert('Configuration imported successfully.');
+        } else {
+          alert('No matching editable sections or valid memory parameters found.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Error reading the JSON configuration file.');
       }
 
-      // Validate sections and emit if something changed
-      const valid = this.validateSections(this.memorySections, this.memorySize);
-      if (updated) {
-        // Emit converted sections in BYTES via this.emit()
-        this.emit();
-        alert('Configuration imported successfully.');
-      } else {
-        alert('No matching editable sections or valid memory parameters found.');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Error reading the JSON configuration file.');
-    }
+      // reset input to allow re-import of same file
+      input.value = '';
+    };
 
-    // reset input to allow re-import of same file
-    input.value = '';
-  };
-
-  reader.readAsText(file);
-}
+    reader.readAsText(file);
+  }
 
 
 }

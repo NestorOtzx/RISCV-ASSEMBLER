@@ -1,5 +1,5 @@
 import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter, Input } from '@angular/core';
-import { ensureFirstLineWrapped, getClosestDiv, placeCaretAtEnd, fixEmptyDivs } from './utils/dom-utils';
+import { ensureFirstLineWrapped, getClosestDiv, placeCaretAtEnd, fixEmptyDivs, getLineAndOffset, restoreSelection } from './utils/dom-utils';
 import { extractContentAndLabels } from './utils/content-utils';
 import { handleNewLineIndent } from './utils/indent-utils';
 import { HistoryManager } from './utils/history-manager';
@@ -124,13 +124,100 @@ export class TextEditor implements AfterViewInit {
         return;
       }
 
-      if (event.key === 'Tab') {
+      if (event.key === 'Tab' && !event.shiftKey) {
         event.preventDefault();
-        this.insertTextAtCursor('\t');
+
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+
+        const startDiv = getClosestDiv(range.startContainer, editorEl);
+        const endDiv = getClosestDiv(range.endContainer, editorEl);
+        if (!startDiv || !endDiv) return;
+
+        const divs = Array.from(editorEl.querySelectorAll("div"));
+        const startIndex = divs.indexOf(startDiv);
+        const endIndex = divs.indexOf(endDiv);
+
+        const first = Math.min(startIndex, endIndex);
+        const last = Math.max(startIndex, endIndex);
+
+        const isMultiLine = first !== last;
+
+        if (isMultiLine) {
+          const selInfo = getLineAndOffset(editorEl);
+
+          for (let i = first; i <= last; i++) {
+            const div = divs[i];
+            if (div.firstChild && div.firstChild.nodeType === Node.TEXT_NODE) {
+              div.firstChild.textContent = "\t" + div.firstChild.textContent;
+            } else {
+              div.insertBefore(document.createTextNode("\t"), div.firstChild);
+            }
+          }
+
+          // restaurar selección REAL
+          if (selInfo) restoreSelection(editorEl, selInfo);
+
+        } else {
+          this.insertTextAtCursor('\t');
+        }
+
+
         const { text, labels } = extractContentAndLabels(editorEl);
-        this.history.push(this.editor.nativeElement.innerHTML);
+        this.emit(text, labels);
+        this.history.push(editorEl.innerHTML);
         return;
       }
+
+      // SHIFT + TAB → desindentar
+      if (event.key === 'Tab' && event.shiftKey) {
+        event.preventDefault();
+
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+
+        const startDiv = getClosestDiv(range.startContainer, editorEl);
+        const endDiv = getClosestDiv(range.endContainer, editorEl);
+        if (!startDiv || !endDiv) return;
+
+        const divs = Array.from(editorEl.querySelectorAll("div"));
+        const startIndex = divs.indexOf(startDiv);
+        const endIndex = divs.indexOf(endDiv);
+
+        const first = Math.min(startIndex, endIndex);
+        const last = Math.max(startIndex, endIndex);
+
+       const selInfo = getLineAndOffset(editorEl);
+
+      // desindentar línea por línea
+      for (let i = first; i <= last; i++) {
+        const div = divs[i];
+        const node = div.firstChild;
+
+        if (!node || node.nodeType !== Node.TEXT_NODE) continue;
+
+        const txt = node.textContent || "";
+
+        if (txt.startsWith("\t")) {
+          node.textContent = txt.slice(1);
+        } else if (txt.startsWith(" ")) {
+          let k = 0;
+          while (k < 4 && node.textContent?.startsWith(" ")) {
+            node.textContent = node.textContent.slice(1);
+            k++;
+          }
+        }
+      }
+
+      // restaurar selección REAL (estable)
+      if (selInfo) restoreSelection(editorEl, selInfo);
+      }
+
+
 
       if (event.key === 'Enter') {
         event.preventDefault();
@@ -152,6 +239,8 @@ export class TextEditor implements AfterViewInit {
       if (sel && editorEl.contains(sel.anchorNode)) this.highlightActiveLine();
     });
   }
+
+  
 
   getLineIndex(lineNumber: number): string {
     if (this.lineIndexing === 'direction') {
@@ -203,7 +292,8 @@ export class TextEditor implements AfterViewInit {
     if (!this.editable) return;
     redo(this.history, (html) => this.restoreContent(html));
   }
-
+  
+  
 
   private restoreContent(html: string) {
     if (!this.editable) return;
