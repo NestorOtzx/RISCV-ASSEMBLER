@@ -45,6 +45,12 @@
   font-weight: bold;
 }
 
+:host  ::ng-deep .label-ref {
+  color: #ffcc00;  /* amarillo */
+  font-weight: bold;
+}
+
+
 :host  ::ng-deep .instr { color: #4cafef; font-weight: bold; }     /* R-type */
 :host  ::ng-deep .instr-r { color: #4cafef; font-weight: bold; }     /* R-type */
 :host  ::ng-deep .instr-i { color: #81c784; font-weight: bold; }     /* I-type */
