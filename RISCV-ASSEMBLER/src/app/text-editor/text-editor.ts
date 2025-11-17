@@ -21,6 +21,7 @@ export class TextEditor implements AfterViewInit {
   private _textFormat: 'riscv' | 'binary' | 'hexadecimal' | 'text' = 'text';
   private _lineStartValue: number = 1;
   private _lineStepValue: number = 4;
+  private activeIndex: number = 1;
 
   @Input()
   set lineIndexing(value: 'numbers' | 'direction') {
@@ -75,6 +76,16 @@ export class TextEditor implements AfterViewInit {
 
   ngAfterViewInit() {
     const editorEl = this.editor.nativeElement;
+    const prevent = (e: Event) => e.preventDefault();
+      editorEl.addEventListener("dragstart", prevent);
+      editorEl.addEventListener("drop", prevent);
+      editorEl.addEventListener("dragover", prevent);
+      editorEl.addEventListener("mousedown", (e) => {
+        // evita que elementos dentro del editor se vuelvan "draggables"
+        const el = e.target as HTMLElement;
+        if (el && el.draggable) el.draggable = false;
+      });
+
     ensureFirstLineWrapped(editorEl);
     this.history.init(editorEl.innerHTML);
 
@@ -338,9 +349,13 @@ export class TextEditor implements AfterViewInit {
       else div.classList.add('unactive-line');
     });
 
-    const activeIndex = divs.indexOf(lineDiv);
-    if (activeIndex !== -1) {
-      this.activeLineChange.emit(activeIndex); 
+    this.activeIndex = divs.indexOf(lineDiv);
+    if (this.activeIndex !== -1) {
+      this.activeLineChange.emit(this.activeIndex); 
+    }
+    if (this.editor) {
+      const { text } = extractContentAndLabels(this.editor.nativeElement);
+      this.updateLineCounter(text);
     }
   }
 
@@ -447,14 +462,14 @@ export class TextEditor implements AfterViewInit {
         }
       }else if (this._textFormat == "hexadecimal")
       {
-        if (clean.length > 0 && isValidHexInstruction(clean) || i == rawLines.length-1) {
+        if (clean.length > 0 && isValidHexInstruction(clean) || i == this.activeIndex) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
           result.push('\u00A0'); // espacio si no es válida
         }
       }else{
-        if (clean.length > 0 && isValidRISCVInstruction(clean) || i == rawLines.length-1) {
+        if (clean.length > 0 && isValidRISCVInstruction(clean) || i == this.activeIndex) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {

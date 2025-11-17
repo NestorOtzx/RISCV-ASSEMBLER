@@ -1,7 +1,7 @@
 import { getClosestDiv, getCaretOffsetInDiv } from './dom-utils';
 
-// realiza la lógica de crear nueva línea con indent heredado.
-// callbacks emitCb & highlightCb son funciones del componente para actualizar estado.
+// realiza la lógica de crear nueva línea con indent heredado y sin duplicar spans.
+// garantiza restauración del caret DESPUÉS de emitCb/highlightCb aunque reescriban el DOM.
 export function handleNewLineIndent(
   editorEl: HTMLDivElement,
   emitCb: () => void,
@@ -13,7 +13,6 @@ export function handleNewLineIndent(
   let range = sel.getRangeAt(0);
 
   // Si hay selección (no collapsed), colocamos el caret al final de la selección
-  // porque Enter suele actuar sobre la posición final.
   if (!sel.isCollapsed) {
     const tmp = range.cloneRange();
     tmp.collapse(false);
@@ -23,117 +22,163 @@ export function handleNewLineIndent(
   const currentDiv = getClosestDiv(range.startContainer, editorEl);
   if (!currentDiv) return;
 
-  // calcular indent existente (acepta tabs o grupos de 4 espacios)
+  // ------------------------------------
+  // CALCULAR INDENTACIÓN
+  // ------------------------------------
   const fullText = currentDiv.textContent ?? '';
-  // detectar indent al inicio (sequence of tabs or groups of 4 spaces)
-  const leadingMatch = fullText.match(/^((\t+)|(( \t)+))/);
+
+  // detectar indent real (tabs o espacios)
+  const leadingMatch = fullText.match(/^\s+/);
   const leading = leadingMatch ? leadingMatch[0] : '';
 
-  // si la línea es label (termina en ':') añadimos indent extra en la nueva línea
   const trimmed = fullText.trim();
   const isLabelLine =
     trimmed.endsWith(':') && /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
 
-  const extraIndent = isLabelLine ? (leading.startsWith('\t') ? '\t' : '\t') : '';
+  const extraIndent = isLabelLine ? '\t' : '';
 
-  // ----------------------------
-  // Crear rango que extraiga TODO lo que queda a la derecha del caret dentro del div
-  // ----------------------------
+  // ------------------------------------
+  // EXTRAER TAIL A LA DERECHA DEL CARET
+  // ------------------------------------
   const tailRange = document.createRange();
   try {
     tailRange.setStart(range.startContainer, range.startOffset);
-    // setEnd after last child of currentDiv
     const last = currentDiv.lastChild;
-    if (last) {
-      tailRange.setEndAfter(last);
-    } else {
-      tailRange.setEnd(currentDiv, currentDiv.childNodes.length);
-    }
-  } catch (e) {
-    // Fallback: si algo raro ocurre, usamos selectNodeContents y ajustar
+    if (last) tailRange.setEndAfter(last);
+  } catch {
     try {
       tailRange.selectNodeContents(currentDiv);
       tailRange.setStart(range.startContainer, range.startOffset);
     } catch {
-      // no podemos continuar
       return;
     }
   }
 
-  // Extraer el fragmento (esto REMUEVE los nodos extraídos del currentDiv)
   const extracted = tailRange.extractContents();
 
-  // ----------------------------
-  // Ajustar currentDiv si quedó vacío: asegurar <br>
-  // ----------------------------
-  if (!currentDiv.firstChild) {
-    currentDiv.appendChild(document.createElement('br'));
-  } else {
-    // si el primer hijo ahora es <br> y hay más nada, ok. No tocar spans.
-  }
+  // ------------------------------------
+  // FIX: Asegurar que la línea actual nunca quede vacía
+  // Versión robusta: si textContent EXACTAMENTE es '', normalizamos a <br>.
+  // ------------------------------------
+  const ensureLineHasBR = (div: HTMLDivElement) => {
+    // Si no hay hijos, insertar <br>
+    if (!div.firstChild) {
+      div.appendChild(document.createElement('br'));
+      return;
+    }
 
-  // ----------------------------
-  // Crear nueva línea y colocar el fragmento
-  // ----------------------------
+    // Si tras extraer el contenido la línea NO tiene contenido textual real,
+    // es decir textContent es exactamente la cadena vacía, la normalizamos a <br>.
+    // Esto captura spans vacíos, text nodes vacíos, comentarios, etc.
+    if (div.textContent === '') {
+      div.innerHTML = '';
+      div.appendChild(document.createElement('br'));
+      return;
+    }
+
+    // Si el primer child es un textNode vacío (caso puntual), reemplazarlo por <br>
+    if (
+      div.childNodes.length === 1 &&
+      div.firstChild.nodeType === Node.TEXT_NODE &&
+      div.firstChild.textContent === ''
+    ) {
+      div.innerHTML = '';
+      div.appendChild(document.createElement('br'));
+      return;
+    }
+
+    // Dejar el resto intacto (línea con contenido real — texto o spans con texto)
+  };
+
+  ensureLineHasBR(currentDiv);
+
+  // ------------------------------------
+  // CREAR LA NUEVA LÍNEA
+  // ------------------------------------
   const newDiv = document.createElement('div');
 
-  // Si necesitamos indent heredado, lo insertamos como textNode al inicio del fragmento.
-  if (leading || extraIndent) {
-    // si el fragmento comienza con un text node, prefijamos el indent ahí para evitar nodos separados
-    const firstNode = extracted.firstChild;
-    if (firstNode && firstNode.nodeType === Node.TEXT_NODE) {
-      // modificar el content del primer text node del fragmento
-      firstNode.textContent = (leading + extraIndent) + (firstNode.textContent ?? '');
+  const indentText = leading + extraIndent;
+  const firstExtractedNode = extracted.firstChild;
+
+  if (indentText.length > 0) {
+    if (firstExtractedNode && firstExtractedNode.nodeType === Node.TEXT_NODE) {
+      firstExtractedNode.textContent = indentText + (firstExtractedNode.textContent ?? '');
       newDiv.appendChild(extracted);
     } else {
-      // insertar un text node con indent y luego el fragmento
-      newDiv.appendChild(document.createTextNode((leading + extraIndent)));
+      newDiv.appendChild(document.createTextNode(indentText));
       newDiv.appendChild(extracted);
     }
   } else {
     newDiv.appendChild(extracted);
   }
 
-  // asegurar que la nueva línea tenga <br> final (para mantener la misma estructura)
-  if (!newDiv.lastChild || (newDiv.lastChild.nodeName !== 'BR')) {
+  // FIX: garantizar <br> en la nueva línea
+  if (!newDiv.lastChild || newDiv.lastChild.nodeName !== 'BR') {
     newDiv.appendChild(document.createElement('br'));
   }
 
-  // Insertar la nueva div en el DOM
+  // Insertar en el DOM
   currentDiv.parentNode!.insertBefore(newDiv, currentDiv.nextSibling);
 
-  // ----------------------------
-  // Posicionar caret: al inicio del contenido de newDiv después del indent
-  // ----------------------------
-  const selNew = window.getSelection();
-  if (!selNew) return;
-  selNew.removeAllRanges();
+  // -------------------------
+  // CALCULAR OBJETIVO DE CARET (antes de llamar al resaltador)
+  // -------------------------
+  const divsNow = Array.from(editorEl.querySelectorAll('div'));
+  const targetLineIndex = divsNow.indexOf(newDiv);
+  const targetCharOffset = indentText.length; // queremos el caret justo después del indent
 
-  // encontrar el primer text node y calcular offset igual a indent length
-  function firstTextNodeOf(node: Node): Text | null {
-    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null);
-    const t = walker.nextNode() as Text | null;
-    return t;
-  }
-
-  const indentLen = (leading + extraIndent).length;
-  const firstText = firstTextNodeOf(newDiv);
-
-  const newRange = document.createRange();
-  if (firstText) {
-    // clamp offset
-    const off = Math.min(indentLen, firstText.textContent?.length ?? 0);
-    newRange.setStart(firstText, off);
-  } else {
-    // no hay text node, fallback a newDiv, child index 0
-    newRange.setStart(newDiv, 0);
-  }
-  newRange.collapse(true);
-  selNew.addRange(newRange);
-
-  try { newDiv.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch {}
-
-  // callbacks
+  // --- llamar al resaltador que puede reescribir DOM ---
   emitCb();
   highlightCb();
+
+  // -------------------------
+  // RESTAURAR CARET buscando por índice de carácter dentro del DIV resultante
+  // -------------------------
+  try {
+    const divsAfter = Array.from(editorEl.querySelectorAll('div'));
+    if (targetLineIndex < 0 || targetLineIndex >= divsAfter.length) return;
+    const targetDiv = divsAfter[targetLineIndex] as HTMLDivElement;
+
+    // función que encuentra el textNode y offset para un índice de caracteres
+    function findNodeForCharIndex(root: Node, charIndex: number) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      let node: Node | null;
+      let acc = 0;
+      while ((node = walker.nextNode())) {
+        const len = node.textContent?.length ?? 0;
+        if (acc + len >= charIndex) {
+          return { node, offset: Math.max(0, charIndex - acc) };
+        }
+        acc += len;
+      }
+      // fallback: si no hay text nodes, o index fuera del total -> usar último text node o root
+      const walker2 = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      const all: Node[] = [];
+      let n2: Node | null;
+      while ((n2 = walker2.nextNode())) all.push(n2);
+      if (all.length > 0) {
+        const last = all[all.length - 1];
+        return { node: last, offset: (last.textContent ?? '').length };
+      }
+      return { node: root, offset: root.childNodes.length };
+    }
+
+    const { node, offset } = findNodeForCharIndex(targetDiv, targetCharOffset);
+
+    const newRange = document.createRange();
+    const nodeTextLen = (node.textContent ?? '').length;
+    const clamped = Math.max(0, Math.min(offset, nodeTextLen));
+    newRange.setStart(node as Node, clamped);
+    newRange.collapse(true);
+
+    const sel2 = window.getSelection();
+    if (sel2) {
+      sel2.removeAllRanges();
+      sel2.addRange(newRange);
+      // asegurar foco en el editor para que el caret sea visible
+      try { editorEl.focus(); } catch {}
+    }
+  } catch {
+    // si falla, no rompemos nada
+  }
 }
