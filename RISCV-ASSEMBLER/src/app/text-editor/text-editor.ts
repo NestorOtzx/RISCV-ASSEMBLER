@@ -430,7 +430,8 @@ export class TextEditor implements AfterViewInit {
       console.log("update line counter!"+this._textFormat + text);
     }
     let lineNumber = 1;
-    for (const raw of rawLines) {
+    for (let i = 0; i<rawLines.length; i++) {
+      const raw = rawLines[i]
       const clean = raw.trim();
       if (this._textFormat == "text"){
         result.push(this.getLineIndex(lineNumber));
@@ -446,14 +447,14 @@ export class TextEditor implements AfterViewInit {
         }
       }else if (this._textFormat == "hexadecimal")
       {
-        if (clean.length > 0 && isValidHexInstruction(clean)) {
+        if (clean.length > 0 && isValidHexInstruction(clean) || i == rawLines.length-1) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
           result.push('\u00A0'); // espacio si no es válida
         }
       }else{
-        if (clean.length > 0 && isValidRISCVInstruction(clean)) {
+        if (clean.length > 0 && isValidRISCVInstruction(clean) || i == rawLines.length-1) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
