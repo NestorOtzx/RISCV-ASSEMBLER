@@ -35,8 +35,9 @@ export class TextEditor implements AfterViewInit {
     this._textFormat = value;
     // recalcula inmediatamente cuando cambia
     if (this.editor) {
-      const { text } = extractContentAndLabels(this.editor.nativeElement);
+      const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
       this.updateLineCounter(text);
+      highlightText(this.editor.nativeElement, labels, this._textFormat);
     }
   }
   @Input()
@@ -321,7 +322,7 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
 
 
 
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' && this._textFormat == 'riscv') {
         event.preventDefault();
         handleNewLineIndent(this.editor.nativeElement, () => {
           const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
@@ -498,7 +499,9 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
   setContent(text: string) {
     if (this.editable)
     {
-      console.log("Set content ");
+      console.log("Set content editable");
+    }else{
+      console.log("Set content noeditable");
     }
     const editorEl = this.editor.nativeElement;
     editorEl.innerHTML = '';
@@ -525,6 +528,7 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
     this.contentChange.emit(textin);
     const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
     this.updateLineCounter(text);
+    console.log("Hightlight text "+text + " with format "+this._textFormat);
     highlightText(this.editor.nativeElement, labels, this._textFormat);
   }
 

@@ -12,8 +12,10 @@ export function assembleJTypeProgressive(
   if (mnemonic !== 'jal') return null;
 
   const rdBin = registerToBinary(tokens[1]);
-  const target = tokens[2];
-  if (!target) return null;
+  let target = tokens[2];
+  if (!target){
+    target = "0";
+  }
 
   let immVal = 0;
   const isNumeric = /^[-+]?\d+$/.test(target) || /^0x[0-9a-fA-F]+$/.test(target);
