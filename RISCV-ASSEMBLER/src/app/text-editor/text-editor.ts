@@ -122,6 +122,55 @@ export class TextEditor implements AfterViewInit {
       const isMac = navigator.platform.toLowerCase().includes('mac');
       const mod = isMac ? event.metaKey : event.ctrlKey;
 
+      if (event.key === "Home" && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+
+        const firstDiv = this.editor.nativeElement.querySelector("div");
+        if (!firstDiv) return;
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+        if (!sel) return;
+
+        if (firstDiv.firstChild) {
+          range.setStart(firstDiv.firstChild, 0);
+        } else {
+          range.setStart(firstDiv, 0);
+        }
+
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
+
+      // END → ir al final absoluto del texto
+      if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+
+        const divs = this.editor.nativeElement.querySelectorAll("div");
+        if (divs.length === 0) return;
+        const lastDiv = divs[divs.length - 1];
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+        if (!sel) return;
+
+        if (lastDiv.lastChild && lastDiv.lastChild.nodeType === Node.TEXT_NODE) {
+          range.setStart(
+            lastDiv.lastChild,
+            lastDiv.lastChild.textContent?.length || 0
+          );
+        } else {
+          range.setStart(lastDiv, lastDiv.childNodes.length);
+        }
+
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
+
       if (mod && !event.shiftKey && event.key.toLowerCase() === 'z') {
         event.preventDefault();
         const prev = this.history.undo();
@@ -466,14 +515,14 @@ export class TextEditor implements AfterViewInit {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
-          result.push('\u00A0'); // espacio si no es válida
+          result.push('\u00A0');
         }
       }else{
         if (clean.length > 0 && isValidRISCVInstruction(clean) || i == this.activeIndex) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
-          result.push('\u00A0'); // espacio si no es válida
+          result.push('\u00A0'); 
         }
       }
     }

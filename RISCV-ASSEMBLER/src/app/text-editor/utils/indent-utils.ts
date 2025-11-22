@@ -1,7 +1,7 @@
 import { getClosestDiv, getCaretOffsetInDiv } from './dom-utils';
 
-// realiza la lógica de crear nueva línea con indent heredado y sin duplicar spans.
-// garantiza restauración del caret DESPUÉS de emitCb/highlightCb aunque reescriban el DOM.
+// realiza la lógica de crear nueva línea con indent heredado y sin duplicar tabs/spans.
+// restaura el caret DESPUÉS de emitCb/highlightCb aunque reescriban el DOM.
 export function handleNewLineIndent(
   editorEl: HTMLDivElement,
   emitCb: () => void,
@@ -28,7 +28,8 @@ export function handleNewLineIndent(
   const fullText = currentDiv.textContent ?? '';
 
   // detectar indent real (tabs o espacios)
-  const leadingMatch = fullText.match(/^\s+/);
+  // mantenemos cualquier combinación de tabs o espacios al inicio
+  const leadingMatch = fullText.match(/^[\t ]*/);
   const leading = leadingMatch ? leadingMatch[0] : '';
 
   const trimmed = fullText.trim();
@@ -36,6 +37,9 @@ export function handleNewLineIndent(
     trimmed.endsWith(':') && /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
 
   const extraIndent = isLabelLine ? '\t' : '';
+
+  // desiredPrefix es lo que queremos que inicie la nueva línea
+  const desiredPrefix = leading + extraIndent;
 
   // ------------------------------------
   // EXTRAER TAIL A LA DERECHA DEL CARET
@@ -55,28 +59,22 @@ export function handleNewLineIndent(
   }
 
   const extracted = tailRange.extractContents();
+  const extractedText = extracted.textContent ?? '';
 
   // ------------------------------------
-  // FIX: Asegurar que la línea actual nunca quede vacía
-  // Versión robusta: si textContent EXACTAMENTE es '', normalizamos a <br>.
+  // NORMALIZAR currentDiv si quedó sin contenido textual
+  // (esto evita <div></div> que generan bugs)
   // ------------------------------------
   const ensureLineHasBR = (div: HTMLDivElement) => {
-    // Si no hay hijos, insertar <br>
     if (!div.firstChild) {
       div.appendChild(document.createElement('br'));
       return;
     }
-
-    // Si tras extraer el contenido la línea NO tiene contenido textual real,
-    // es decir textContent es exactamente la cadena vacía, la normalizamos a <br>.
-    // Esto captura spans vacíos, text nodes vacíos, comentarios, etc.
     if (div.textContent === '') {
       div.innerHTML = '';
       div.appendChild(document.createElement('br'));
       return;
     }
-
-    // Si el primer child es un textNode vacío (caso puntual), reemplazarlo por <br>
     if (
       div.childNodes.length === 1 &&
       div.firstChild.nodeType === Node.TEXT_NODE &&
@@ -86,60 +84,79 @@ export function handleNewLineIndent(
       div.appendChild(document.createElement('br'));
       return;
     }
-
-    // Dejar el resto intacto (línea con contenido real — texto o spans con texto)
   };
-
   ensureLineHasBR(currentDiv);
 
   // ------------------------------------
-  // CREAR LA NUEVA LÍNEA
+  // DETERMINAR qué parte de desiredPrefix YA VIENE en extracted
+  // (comparamos sólo prefijo de whitespace del fragmento extraído,
+  // y no confundimos letras con whitespace)
+  // ------------------------------------
+  const extractedLeadingMatch = extractedText.match(/^[\t ]*/);
+  const extractedLeading = extractedLeadingMatch ? extractedLeadingMatch[0] : '';
+
+  // calcular el prefijo común (carácter a carácter) entre desiredPrefix y extractedLeading
+  let presentLen = 0;
+  while (
+    presentLen < desiredPrefix.length &&
+    presentLen < extractedLeading.length &&
+    desiredPrefix[presentLen] === extractedLeading[presentLen]
+  ) {
+    presentLen++;
+  }
+
+  // toAdd es la porción de desiredPrefix que NO está presente al inicio del fragmento extraído
+  const toAdd = desiredPrefix.slice(presentLen);
+
+  // ------------------------------------
+  // CREAR LA NUEVA LÍNEA: anteponer sólo 'toAdd' si hace falta
   // ------------------------------------
   const newDiv = document.createElement('div');
 
-  const indentText = leading + extraIndent;
-  const firstExtractedNode = extracted.firstChild;
-
-  if (indentText.length > 0) {
-    if (firstExtractedNode && firstExtractedNode.nodeType === Node.TEXT_NODE) {
-      firstExtractedNode.textContent = indentText + (firstExtractedNode.textContent ?? '');
+  if (toAdd.length > 0) {
+    const firstNode = extracted.firstChild;
+    if (firstNode && firstNode.nodeType === Node.TEXT_NODE) {
+      (firstNode as Text).textContent = toAdd + (firstNode.textContent ?? '');
       newDiv.appendChild(extracted);
     } else {
-      newDiv.appendChild(document.createTextNode(indentText));
+      newDiv.appendChild(document.createTextNode(toAdd));
       newDiv.appendChild(extracted);
     }
   } else {
+    // el fragmento ya incluye el prefijo deseado (o no necesita prefijo)
     newDiv.appendChild(extracted);
   }
 
-  // FIX: garantizar <br> en la nueva línea
+  // asegurar <br> final en nueva línea
   if (!newDiv.lastChild || newDiv.lastChild.nodeName !== 'BR') {
     newDiv.appendChild(document.createElement('br'));
   }
 
-  // Insertar en el DOM
+  // Insertar después de currentDiv
   currentDiv.parentNode!.insertBefore(newDiv, currentDiv.nextSibling);
 
-  // -------------------------
-  // CALCULAR OBJETIVO DE CARET (antes de llamar al resaltador)
-  // -------------------------
+  // ------------------------------------
+  // OBJETIVO DE CARET: caracter dentro de la nueva línea
+  // queremos el caret justo después de desiredPrefix (longitud completa),
+  // porque aunque parte del prefijo venga dentro del fragmento, el
+  // usuario espera el caret después del indent completo.
+  // ------------------------------------
   const divsNow = Array.from(editorEl.querySelectorAll('div'));
   const targetLineIndex = divsNow.indexOf(newDiv);
-  const targetCharOffset = indentText.length; // queremos el caret justo después del indent
+  const targetCharOffset = desiredPrefix.length;
 
   // --- llamar al resaltador que puede reescribir DOM ---
   emitCb();
   highlightCb();
 
-  // -------------------------
+  // ------------------------------------
   // RESTAURAR CARET buscando por índice de carácter dentro del DIV resultante
-  // -------------------------
+  // ------------------------------------
   try {
     const divsAfter = Array.from(editorEl.querySelectorAll('div'));
     if (targetLineIndex < 0 || targetLineIndex >= divsAfter.length) return;
     const targetDiv = divsAfter[targetLineIndex] as HTMLDivElement;
 
-    // función que encuentra el textNode y offset para un índice de caracteres
     function findNodeForCharIndex(root: Node, charIndex: number) {
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
       let node: Node | null;
@@ -175,10 +192,9 @@ export function handleNewLineIndent(
     if (sel2) {
       sel2.removeAllRanges();
       sel2.addRange(newRange);
-      // asegurar foco en el editor para que el caret sea visible
       try { editorEl.focus(); } catch {}
     }
   } catch {
-    // si falla, no rompemos nada
+    // no romper si falla la restauración
   }
 }
