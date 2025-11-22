@@ -122,54 +122,96 @@ export class TextEditor implements AfterViewInit {
       const isMac = navigator.platform.toLowerCase().includes('mac');
       const mod = isMac ? event.metaKey : event.ctrlKey;
 
-      if (event.key === "Home" && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault();
+if (event.key === "Home" && !event.ctrlKey && !event.metaKey) {
+  event.preventDefault();
 
-        const firstDiv = this.editor.nativeElement.querySelector("div");
-        if (!firstDiv) return;
+  const editor = this.editor.nativeElement;
+  const firstDiv = editor.querySelector("div");
+  if (!firstDiv) return;
 
-        const range = document.createRange();
-        const sel = window.getSelection();
-        if (!sel) return;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
 
-        if (firstDiv.firstChild) {
-          range.setStart(firstDiv.firstChild, 0);
-        } else {
-          range.setStart(firstDiv, 0);
-        }
+  const range = document.createRange();
 
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        return;
-      }
+  // punto absoluto de inicio del documento
+  const docStartNode = firstDiv.firstChild || firstDiv;
+  const docStartOffset = 0;
 
-      // END → ir al final absoluto del texto
-      if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault();
+  // SIN SHIFT → solo mover cursor
+  if (!event.shiftKey) {
+    range.setStart(docStartNode, docStartOffset);
+    range.setEnd(docStartNode, docStartOffset);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return;
+  }
 
-        const divs = this.editor.nativeElement.querySelectorAll("div");
-        if (divs.length === 0) return;
-        const lastDiv = divs[divs.length - 1];
+  // CON SHIFT → seleccionar desde inicio del documento hasta posición actual
+  const focusNode = sel.focusNode!;
+  const focusOffset = sel.focusOffset;
 
-        const range = document.createRange();
-        const sel = window.getSelection();
-        if (!sel) return;
+  // asegura que no se seleccione fuera del editor
+  if (!editor.contains(focusNode)) return;
 
-        if (lastDiv.lastChild && lastDiv.lastChild.nodeType === Node.TEXT_NODE) {
-          range.setStart(
-            lastDiv.lastChild,
-            lastDiv.lastChild.textContent?.length || 0
-          );
-        } else {
-          range.setStart(lastDiv, lastDiv.childNodes.length);
-        }
+  range.setStart(docStartNode, docStartOffset);
+  range.setEnd(focusNode, focusOffset);
 
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        return;
-      }
+  sel.removeAllRanges();
+  sel.addRange(range);
+  return;
+}
+
+
+
+// END → fin absoluto del editor
+if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
+  event.preventDefault();
+
+  const editor = this.editor.nativeElement;
+  const divs = editor.querySelectorAll("div");
+  if (divs.length === 0) return;
+
+  const lastDiv = divs[divs.length - 1];
+
+  const sel = window.getSelection();
+  if (!sel) return;
+
+  const range = document.createRange();
+  const endOffset =
+    lastDiv.lastChild?.textContent?.length ??
+    lastDiv.childNodes.length;
+
+  // SIN SHIFT → cursor al final sin selección
+  if (!event.shiftKey) {
+    if (lastDiv.lastChild) {
+      range.setStart(lastDiv.lastChild, endOffset);
+      range.setEnd(lastDiv.lastChild, endOffset);
+    } else {
+      range.setStart(lastDiv, 0);
+      range.setEnd(lastDiv, 0);
+    }
+  } 
+  // CON SHIFT → extender selección dentro del editor
+  else {
+    const current = sel.focusNode;
+    if (!editor.contains(current)) return; // evita seleccionar fuera
+
+    range.setStart(sel.anchorNode!, sel.anchorOffset);
+
+    if (lastDiv.lastChild) {
+      range.setEnd(lastDiv.lastChild, endOffset);
+    } else {
+      range.setEnd(lastDiv, 0);
+    }
+  }
+
+  sel.removeAllRanges();
+  sel.addRange(range);
+  return;
+}
+
+
 
       if (mod && !event.shiftKey && event.key.toLowerCase() === 'z') {
         event.preventDefault();
