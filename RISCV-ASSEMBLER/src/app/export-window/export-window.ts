@@ -164,6 +164,8 @@ endmodule
 
   const isVerilog = template.includes('module');
 
+  let memContent;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const isHex = line.startsWith('0x') || line.startsWith('0X');
@@ -187,13 +189,19 @@ endmodule
         memLines.push(`    memory[${addr}] = 32'h${clean};`);
       }
     }
- else {
+    else {
       // === VHDL OUTPUT ===
       if (memoryWidth === 8) {
         const clean = isHex ? line.replace(/^0x/i, '').padStart(8, '0') :
                               line.replace(/\s+/g,'').padStart(32,'0');
 
-        const parts = [clean.slice(0,2), clean.slice(2,4), clean.slice(4,6), clean.slice(6,8)];
+        let parts;
+        if (isHex)
+        {
+          parts = [clean.slice(0,2), clean.slice(2,4), clean.slice(4,6), clean.slice(6,8)];
+        }else{
+          parts = [clean.slice(0,8), clean.slice(8,16), clean.slice(16,24), clean.slice(24,32)];
+        }
         for (let j = 0; j < parts.length; j++) {
           const addr = start + i * 4 + j;
           memLines.push(`    ${addr} => x"${parts[j]}"`);
@@ -206,7 +214,14 @@ endmodule
     }
   }
 
-  const memContent = memLines.join(',\n');
+  if (isVerilog)
+  {
+    memContent = memLines.join('\n');
+  }else{
+    memContent = memLines.join(',\n');
+  }
+
+  
 
   return template
     .replaceAll('{MEM_SIZE}', memSize.toString())
