@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "build-gh": "ng build --base-href='/RISCV-ASSEMBLER/'",
+    "deploy": "npm run build-gh && npx angular-cli-ghpages --dir=dist/RISCV-Assembler/browser"
   },
   "prettier": {
     "overrides": [
