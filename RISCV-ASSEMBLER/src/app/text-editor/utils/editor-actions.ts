@@ -30,15 +30,12 @@ export function handlePaste(
 ) {
   const prevHTML = editorEl.innerHTML;
   const selection = window.getSelection();
-  console.log("Selection: "+selection+ "range count: "+selection?.rangeCount);
   if (!selection || selection.rangeCount === 0) return;
 
   const range = selection.getRangeAt(0);
 
   let startDiv = getClosestDiv(range.startContainer, editorEl);
-  console.log("Selection start div: ", startDiv);
   let endDiv = getClosestDiv(range.endContainer, editorEl);
-  console.log("Selection end div: ", endDiv);
 
   if (!startDiv) {
     startDiv = document.createElement('div');
@@ -49,8 +46,6 @@ export function handlePaste(
 
   const beforeText = getTextBeforeRange(startDiv, range);
   const afterText = getTextAfterRange(endDiv, range);
-
-  console.log("Selection range: "+range+ "end offset: "+ range.endOffset + " start offset: "+ range.startOffset + " TEXT "+afterText + " : "+beforeText);
 
   const divs = Array.from(editorEl.querySelectorAll('div'));
   const startIndex = divs.indexOf(startDiv);
@@ -80,19 +75,46 @@ export function handlePaste(
     lastInserted.textContent = (lastInserted.textContent || '') + afterText;
   }
 
-  const newRange = document.createRange();
-  const firstChild = lastInserted.firstChild;
-  if (firstChild && firstChild.nodeType === Node.TEXT_NODE) {
-    newRange.setStart(firstChild, (firstChild as Text).length);
-  } else {
-    newRange.setStart(lastInserted, lastInserted.childNodes.length);
+  // ✅ Normalización DOM que antes destruía el cursor
+  fixEmptyDivs(editorEl);
+  ensureFirstLineWrapped(editorEl);
+
+  // ✅ Re-obtener div real después de normalización
+  let targetDiv = lastInserted;
+
+  if (!targetDiv.parentNode) {
+    const updatedDivs = editorEl.querySelectorAll('div');
+    targetDiv = updatedDivs[
+      Math.min(startIndex + pasteLines.length - 1, updatedDivs.length - 1)
+    ] as HTMLDivElement;
   }
+
+  let textNode: Text;
+
+  if (targetDiv.firstChild && targetDiv.firstChild.nodeType === Node.TEXT_NODE) {
+    textNode = targetDiv.firstChild as Text;
+  } else {
+    textNode = targetDiv.appendChild(document.createTextNode('')) as Text;
+  }
+
+  let offset = 0;
+
+  if (pasteLines.length === 1) {
+    offset = beforeText.length + (pasteLines[0]?.length ?? 0);
+  } else {
+    offset = textNode.textContent?.length ?? 0;
+    if (afterText) offset -= afterText.length;
+  }
+
+  // ✅ Restaurar selección real
+  const newRange = document.createRange();
+  newRange.setStart(textNode, Math.max(0, Math.min(offset, textNode.length)));
   newRange.collapse(true);
+
   selection.removeAllRanges();
   selection.addRange(newRange);
 
-  fixEmptyDivs(editorEl);
-  ensureFirstLineWrapped(editorEl);
+  editorEl.focus();
 
   if (editorEl.innerHTML !== prevHTML) {
     const { text: cleaned, labels } = extractContentAndLabels(editorEl);
@@ -101,6 +123,8 @@ export function handlePaste(
     highlightActiveLine();
   }
 }
+
+
 
 function getTextBeforeRange(div: HTMLDivElement, range: Range): string {
   const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT, null);

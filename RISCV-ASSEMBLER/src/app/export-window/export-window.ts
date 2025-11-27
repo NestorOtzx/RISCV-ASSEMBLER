@@ -63,19 +63,23 @@ end Behavioral;
 
   readonly VERILOG_TEMPLATE = `
 module {COMPONENT_NAME}(
-  input logic clk,
-  input logic [31:0] addr,
-  output logic [{DATA_WIDTH}:0] data_out
+  input clk,
+  input [31:0] addr,
+  output reg [{DATA_WIDTH}:0] data_out
 );
-  logic [{DATA_WIDTH}:0] memory [0:{MEM_SIZE}-1] = '{
-{MEM_CONTENT}
-  };
 
-  always_ff @(posedge clk) begin
+  reg [{DATA_WIDTH}:0] memory [0:{MEM_SIZE}-1];
+
+  initial begin
+{MEM_CONTENT}
+  end
+
+  always @(posedge clk) begin
     data_out <= memory[addr];
   end
 endmodule
 `;
+
 
   ngOnInit(): void {
     this.memSize.set(this.initialMemSize);
@@ -163,32 +167,47 @@ endmodule
   const dataWidth = memoryWidth - 1;
   const memLines: string[] = [];
 
+  const isVerilog = template.includes('module');
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const isHex = line.startsWith('0x') || line.startsWith('0X');
 
-    if (memoryWidth === 8) {
-      if (isHex) {
-        // === HEXADECIMAL MODE ===
-        const clean = line.replace(/^0x/i, '').padStart(8, '0');
-        const parts = [clean.slice(0, 2), clean.slice(2, 4), clean.slice(4, 6), clean.slice(6, 8)];
+    if (isVerilog) {
+      let addr = start + i;
+      if (memoryWidth === 8) {
+        const clean = (isHex ? line.replace(/^0x/i, '') : parseInt(line, 2).toString(16))
+          .padStart(8, '0');
+
+        const parts = [clean.slice(0,2), clean.slice(2,4), clean.slice(4,6), clean.slice(6,8)];
         for (let j = 0; j < parts.length; j++) {
-          const addr = start + i * 4 + j;
-          memLines.push(`    ${addr} => "0x${parts[j]}"`);
+          memLines.push(`    memory[${addr + j}] = 8'h${parts[j]};`);
         }
+
       } else {
-        // === BINARY MODE ===
-        const clean = line.replace(/\s+/g, '').padStart(32, '0'); // asegurar 32 bits
-        const parts = [clean.slice(0, 8), clean.slice(8, 16), clean.slice(16, 24), clean.slice(24, 32)];
+        const clean = isHex
+          ? line.replace(/^0x/i, '').padStart(8,'0')
+          : parseInt(line, 2).toString(16).padStart(8,'0');
+
+        memLines.push(`    memory[${addr}] = 32'h${clean};`);
+      }
+    }
+ else {
+      // === VHDL OUTPUT ===
+      if (memoryWidth === 8) {
+        const clean = isHex ? line.replace(/^0x/i, '').padStart(8, '0') :
+                              line.replace(/\s+/g,'').padStart(32,'0');
+
+        const parts = [clean.slice(0,2), clean.slice(2,4), clean.slice(4,6), clean.slice(6,8)];
         for (let j = 0; j < parts.length; j++) {
           const addr = start + i * 4 + j;
-          memLines.push(`    ${addr} => "${parts[j]}"`);
+          memLines.push(`    ${addr} => x"${parts[j]}"`);
         }
+
+      } else {
+        const addr = start + i;
+        memLines.push(`    ${addr} => x"${line.replace(/^0x/i,'')}"`);
       }
-    } else {
-      // === 32-bit WIDTH ===
-      const addr = start + i;
-      memLines.push(`    ${addr} => "${line}"`);
     }
   }
 

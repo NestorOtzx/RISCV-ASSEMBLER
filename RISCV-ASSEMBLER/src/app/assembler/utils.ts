@@ -75,13 +75,33 @@ export function encodeImmediate12Bits(value: number): string {
 }
 
 export function parseImmediate(token: string): number {
-  if (token.startsWith('0x') || token.startsWith('0X')) {
-    return parseInt(token, 16);
-  } else if (!isNaN(Number(token)) && token.length > 0) {
-    return parseInt(token, 10);
+  if (!token) return 0;
+
+  token = token.trim();
+
+  let sign = 1;
+
+  // Detectar signo al inicio
+  if (token.startsWith('-')) {
+    sign = -1;
+    token = token.slice(1);
+  } else if (token.startsWith('+')) {
+    token = token.slice(1);
   }
+
+  // Hexadecimal
+  if (/^0x[0-9a-f]+$/i.test(token)) {
+    return sign * parseInt(token, 16);
+  }
+
+  // Decimal con signo ya aplicado
+  if (!isNaN(Number(token))) {
+    return sign * parseInt(token, 10);
+  }
+
   return 0;
 }
+
 
 export function isValidRISCVInstruction(line: string): boolean {
   if (!line) return false;

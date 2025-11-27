@@ -4,14 +4,25 @@
       <button
         data-testid="btn-toggle-memory-editor"
         (click)="toggleMemoryEditor()"
-        class="p-2 hover:bg-gray-700 rounded">
+        class="p-2 hover:bg-blue-700 rounded">
         <span class="text-2xl leading-none">☰</span>
       </button>
     </div>
     <div data-testid="nav-title">
       RISCV-Assembler
     </div>
-    <div></div>
+    <div>
+       <button
+      class="p-2 hover:bg-blue-700 rounded flex items-center gap-2"
+      onclick="window.open('https://javerianacaliedu-my.sharepoint.com/:b:/g/personal/nmortizm_javerianacali_edu_co/IQBv3XGWA2GdTZzi1p0s1UO4AXyTC0f2mWldkbLNVD4IhVE?e=2pEtCM', '_blank')">
+      <!-- Ícono de documento SVG de Heroicons -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+           viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M7 21h10a2 2 0 002-2V7.414a2 2 0 00-.586-1.414l-4.414-4.414A2 2 0 0014.586 1H7a2 2 0 00-2 2v16a2 2 0 002 2z" />
+      </svg>
+    </button>
+    </div>
   </nav>
 
   <!-- TOOLBAR -->
