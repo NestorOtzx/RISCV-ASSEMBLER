@@ -58,7 +58,6 @@ export function getCaretOffsetInDiv(div: HTMLDivElement): number {
   try {
     preRange.setEnd(range.endContainer, range.endOffset);
   } catch {
-    // en casos extremos la setEnd puede fallar; devolvemos 0
     return 0;
   }
   return preRange.toString().length;
@@ -68,4 +67,94 @@ export function fixEmptyDivs(editorEl: HTMLElement) {
   editorEl.querySelectorAll('div').forEach((d) => {
     if ((d as HTMLElement).innerHTML.trim() === '') (d as HTMLElement).innerHTML = '<br>';
   });
+}
+
+
+export function getLineAndOffset(root: HTMLElement) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+
+  const range = sel.getRangeAt(0);
+  const divs = Array.from(root.querySelectorAll('div'));
+  const startDiv = getClosestDiv(range.startContainer, root);
+  const endDiv = getClosestDiv(range.endContainer, root);
+  if (!startDiv || !endDiv) return null;
+
+  function charOffsetInDiv(div: HTMLElement, container: Node, containerOffset: number) {
+    let index = 0;
+    const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT, null);
+    let node: Text | null;
+    while ((node = walker.nextNode() as Text | null)) {
+      if (node === container) {
+        return index + containerOffset;
+      }
+      index += node.textContent?.length ?? 0;
+    }
+
+    return index;
+  }
+
+  const startChar = charOffsetInDiv(startDiv, range.startContainer, range.startOffset);
+  const endChar = charOffsetInDiv(endDiv, range.endContainer, range.endOffset);
+
+  return {
+    divs,
+    startLine: divs.indexOf(startDiv),
+    endLine: divs.indexOf(endDiv),
+    startChar,
+    endChar,
+    startLineText: startDiv.textContent ?? '',
+    endLineText: endDiv.textContent ?? '',
+    isCollapsed: sel.isCollapsed
+  };
+}
+
+export function restoreSelection(root: HTMLElement, info: any) {
+  if (!info) return;
+  const sel = window.getSelection();
+  if (!sel) return;
+
+  const range = document.createRange();
+  const startDiv = info.divs[info.startLine];
+  const endDiv = info.divs[info.endLine];
+  if (!startDiv || !endDiv) return;
+
+  const newStartText = startDiv.textContent ?? '';
+  const newEndText = endDiv.textContent ?? '';
+
+  const startDiff = newStartText.length - (info.startLineText?.length ?? 0);
+  const endDiff = newEndText.length - (info.endLineText?.length ?? 0);
+
+  const newStartChar = Math.max(0, Math.min(newStartText.length, info.startChar + startDiff));
+  const newEndChar = Math.max(0, Math.min(newEndText.length, info.endChar + endDiff));
+
+  function nodeAtCharIndex(div: HTMLElement, charIndex: number) {
+    const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT, null);
+    let node: Text | null;
+    let acc = 0;
+    while ((node = walker.nextNode() as Text | null)) {
+      const len = node.textContent?.length ?? 0;
+      if (acc + len >= charIndex) {
+        return { node, offset: Math.max(0, charIndex - acc) };
+      }
+      acc += len;
+    }
+    const last = Array.from(div.childNodes).reverse().find(n => n.nodeType === Node.TEXT_NODE) as Text | undefined;
+    if (last) return { node: last, offset: last.textContent?.length ?? 0 };
+    return { node: div, offset: 0 };
+  }
+
+  const startTarget = nodeAtCharIndex(startDiv, newStartChar);
+  const endTarget = nodeAtCharIndex(endDiv, newEndChar);
+
+  try {
+    range.setStart(startTarget.node as Node, startTarget.offset);
+    range.setEnd(endTarget.node as Node, endTarget.offset);
+  } catch (e) {
+    range.selectNodeContents(startDiv);
+    range.collapse(false);
+  }
+
+  sel.removeAllRanges();
+  sel.addRange(range);
 }

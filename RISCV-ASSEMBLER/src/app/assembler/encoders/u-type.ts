@@ -23,16 +23,15 @@ export function decodeUTypeProgressive(binary: string): string | null {
   const rdBin = padded.slice(20, 25);
   const immBin = padded.slice(0, 20);
 
-  // Buscar instrucción que coincida exactamente con el opcode
   const entry = Object.entries(uInstructions).find(
     ([, data]) => data.opcode === opcode
   );
 
-  if (!entry) return null; // Si no hay coincidencia, retornar null
+  if (!entry) return null; 
 
   const mnemonic = entry[0];
   const rd = rdBin ? `x${parseInt(rdBin, 2)}` : '';
-  const imm = parseInt(immBin, 2); // desplazamiento 12 bits
+  const imm = parseInt(immBin, 2);
 
   return `${mnemonic} ${rd}, ${imm}`.trim();
 }

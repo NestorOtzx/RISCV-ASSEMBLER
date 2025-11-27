@@ -1,5 +1,5 @@
 import { Component, ElementRef, ViewChild, AfterViewInit, Output, EventEmitter, Input } from '@angular/core';
-import { ensureFirstLineWrapped, getClosestDiv, placeCaretAtEnd, fixEmptyDivs } from './utils/dom-utils';
+import { ensureFirstLineWrapped, getClosestDiv, placeCaretAtEnd, fixEmptyDivs, getLineAndOffset, restoreSelection } from './utils/dom-utils';
 import { extractContentAndLabels } from './utils/content-utils';
 import { handleNewLineIndent } from './utils/indent-utils';
 import { HistoryManager } from './utils/history-manager';
@@ -21,21 +21,21 @@ export class TextEditor implements AfterViewInit {
   private _textFormat: 'riscv' | 'binary' | 'hexadecimal' | 'text' = 'text';
   private _lineStartValue: number = 1;
   private _lineStepValue: number = 4;
+  private activeIndex: number = 1;
 
   @Input()
   set lineIndexing(value: 'numbers' | 'direction') {
     this._lineIndexing = value;
-    // recalcula los números de línea con la nueva forma
     const { text } = extractContentAndLabels(this.editor.nativeElement);
     this.updateLineCounter(text);
   }
   @Input()
   set textFormat(value: 'riscv' | 'binary' | 'hexadecimal' | 'text') {
     this._textFormat = value;
-    // recalcula inmediatamente cuando cambia
     if (this.editor) {
-      const { text } = extractContentAndLabels(this.editor.nativeElement);
+      const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
       this.updateLineCounter(text);
+      highlightText(this.editor.nativeElement, labels, this._textFormat);
     }
   }
   @Input()
@@ -75,6 +75,15 @@ export class TextEditor implements AfterViewInit {
 
   ngAfterViewInit() {
     const editorEl = this.editor.nativeElement;
+    const prevent = (e: Event) => e.preventDefault();
+      editorEl.addEventListener("dragstart", prevent);
+      editorEl.addEventListener("drop", prevent);
+      editorEl.addEventListener("dragover", prevent);
+      editorEl.addEventListener("mousedown", (e) => {
+        const el = e.target as HTMLElement;
+        if (el && el.draggable) el.draggable = false;
+      });
+
     ensureFirstLineWrapped(editorEl);
     this.history.init(editorEl.innerHTML);
 
@@ -86,7 +95,6 @@ export class TextEditor implements AfterViewInit {
     });
 
 
-    // mousemove/leave para tooltip
     editorEl.addEventListener('mousemove', (e) => {
       const target = e.target as HTMLElement | null;
       if (target && target.classList.contains('wrong-line') && target.dataset['error']) {
@@ -97,7 +105,6 @@ export class TextEditor implements AfterViewInit {
     });
     editorEl.addEventListener('mouseleave', () => this.tooltip.hide());
 
-    // input
     editorEl.addEventListener('input', () => {
       ensureFirstLineWrapped(editorEl);
       fixEmptyDivs(editorEl);
@@ -124,15 +131,98 @@ export class TextEditor implements AfterViewInit {
         return;
       }
 
-      if (event.key === 'Tab') {
+      if (event.key === 'Tab' && !event.shiftKey) {
         event.preventDefault();
-        this.insertTextAtCursor('\t');
+
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+
+        const startDiv = getClosestDiv(range.startContainer, editorEl);
+        const endDiv = getClosestDiv(range.endContainer, editorEl);
+        if (!startDiv || !endDiv) return;
+
+        const divs = Array.from(editorEl.querySelectorAll("div"));
+        const startIndex = divs.indexOf(startDiv);
+        const endIndex = divs.indexOf(endDiv);
+
+        const first = Math.min(startIndex, endIndex);
+        const last = Math.max(startIndex, endIndex);
+
+        const isMultiLine = first !== last;
+
+        if (isMultiLine) {
+          const selInfo = getLineAndOffset(editorEl);
+
+          for (let i = first; i <= last; i++) {
+            const div = divs[i];
+            if (div.firstChild && div.firstChild.nodeType === Node.TEXT_NODE) {
+              div.firstChild.textContent = "\t" + div.firstChild.textContent;
+            } else {
+              div.insertBefore(document.createTextNode("\t"), div.firstChild);
+            }
+          }
+
+          if (selInfo) restoreSelection(editorEl, selInfo);
+
+        } else {
+          this.insertTextAtCursor('\t');
+        }
+
+
         const { text, labels } = extractContentAndLabels(editorEl);
-        this.history.push(this.editor.nativeElement.innerHTML);
+        this.emit(text, labels);
+        this.history.push(editorEl.innerHTML);
         return;
       }
 
-      if (event.key === 'Enter') {
+      if (event.key === 'Tab' && event.shiftKey) {
+        event.preventDefault();
+
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+
+        const startDiv = getClosestDiv(range.startContainer, editorEl);
+        const endDiv = getClosestDiv(range.endContainer, editorEl);
+        if (!startDiv || !endDiv) return;
+
+        const divs = Array.from(editorEl.querySelectorAll("div"));
+        const startIndex = divs.indexOf(startDiv);
+        const endIndex = divs.indexOf(endDiv);
+
+        const first = Math.min(startIndex, endIndex);
+        const last = Math.max(startIndex, endIndex);
+
+       const selInfo = getLineAndOffset(editorEl);
+
+      for (let i = first; i <= last; i++) {
+        const div = divs[i];
+        const node = div.firstChild;
+
+        if (!node || node.nodeType !== Node.TEXT_NODE) continue;
+
+        const txt = node.textContent || "";
+
+        if (txt.startsWith("\t")) {
+          node.textContent = txt.slice(1);
+        } else if (txt.startsWith(" ")) {
+          let k = 0;
+          while (k < 4 && node.textContent?.startsWith(" ")) {
+            node.textContent = node.textContent.slice(1);
+            k++;
+          }
+        }
+      }
+
+      if (selInfo) restoreSelection(editorEl, selInfo);
+      }
+
+
+
+      if (event.key === 'Enter' && this._textFormat == 'riscv') {
         event.preventDefault();
         handleNewLineIndent(this.editor.nativeElement, () => {
           const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
@@ -144,7 +234,6 @@ export class TextEditor implements AfterViewInit {
       }
     });
 
-    // mouse/keyboard selection updates
     editorEl.addEventListener('keyup', () => this.highlightActiveLine());
     editorEl.addEventListener('mouseup', () => this.highlightActiveLine());
     document.addEventListener('selectionchange', () => {
@@ -152,6 +241,8 @@ export class TextEditor implements AfterViewInit {
       if (sel && editorEl.contains(sel.anchorNode)) this.highlightActiveLine();
     });
   }
+
+  
 
   getLineIndex(lineNumber: number): string {
     if (this.lineIndexing === 'direction') {
@@ -203,7 +294,8 @@ export class TextEditor implements AfterViewInit {
     if (!this.editable) return;
     redo(this.history, (html) => this.restoreContent(html));
   }
-
+  
+  
 
   private restoreContent(html: string) {
     if (!this.editable) return;
@@ -248,9 +340,13 @@ export class TextEditor implements AfterViewInit {
       else div.classList.add('unactive-line');
     });
 
-    const activeIndex = divs.indexOf(lineDiv);
-    if (activeIndex !== -1) {
-      this.activeLineChange.emit(activeIndex); 
+    this.activeIndex = divs.indexOf(lineDiv);
+    if (this.activeIndex !== -1) {
+      this.activeLineChange.emit(this.activeIndex); 
+    }
+    if (this.editor) {
+      const { text } = extractContentAndLabels(this.editor.nativeElement);
+      this.updateLineCounter(text);
     }
   }
 
@@ -258,7 +354,6 @@ export class TextEditor implements AfterViewInit {
     const editorEl = this.editor.nativeElement;
     const divs = Array.from(editorEl.querySelectorAll('div'));
 
-    // Si no hay líneas o el índice no existe → limpiar todas las clases
     if (lineIndex < 0 || lineIndex >= divs.length) {
       divs.forEach(div => {
         div.classList.remove('active-line', 'unactive-line');
@@ -300,10 +395,6 @@ export class TextEditor implements AfterViewInit {
   }
 
   setContent(text: string) {
-    if (this.editable)
-    {
-      console.log("Set content ");
-    }
     const editorEl = this.editor.nativeElement;
     editorEl.innerHTML = '';
     text.split(/\r?\n/).forEach(line => {
@@ -335,39 +426,35 @@ export class TextEditor implements AfterViewInit {
   private updateLineCounter(text: string) {
     const rawLines = text.split('\n');
     const result: string[] = [];
-    if (this.editable)
-    {
-      console.log("update line counter!"+this._textFormat + text);
-    }
     let lineNumber = 1;
-    for (const raw of rawLines) {
+    for (let i = 0; i<rawLines.length; i++) {
+      const raw = rawLines[i]
       const clean = raw.trim();
       if (this._textFormat == "text"){
         result.push(this.getLineIndex(lineNumber));
         lineNumber++;
       }else if (this._textFormat == "binary")
       {
-        //todo: check if valid binary line
         if (clean.length > 0 && isValidBinaryInstruction(clean)) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
-          result.push('\u00A0'); // espacio si no es válida
+          result.push('\u00A0');
         }
       }else if (this._textFormat == "hexadecimal")
       {
-        if (clean.length > 0 && isValidHexInstruction(clean)) {
+        if (clean.length > 0 && isValidHexInstruction(clean) || i == this.activeIndex) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
-          result.push('\u00A0'); // espacio si no es válida
+          result.push('\u00A0');
         }
       }else{
-        if (clean.length > 0 && isValidRISCVInstruction(clean)) {
+        if (clean.length > 0 && isValidRISCVInstruction(clean) || i == this.activeIndex) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
-          result.push('\u00A0'); // espacio si no es válida
+          result.push('\u00A0'); 
         }
       }
     }

@@ -11,8 +11,8 @@ export type TranslationResult = {
   output: string[];
   labelMap: Record<string, number>;
   errors: { line: number; message: string }[];
-  editorToOutput: number[]; // editor line → output line
-  outputToEditor: number[]; // output line → editor line
+  editorToOutput: number[];
+  outputToEditor: number[];
 };
 
   
@@ -26,7 +26,6 @@ export function RiscVToBinary(lines: string[], memoryWidth: 8 | 32): Translation
 
   let instructionAddress = 0;
 
-  // PRIMERA PASADA — construye labelMap y binarios iniciales
   lines.forEach((line, i) => {
     const trimmed = line.trim();
     if (!trimmed) {
@@ -34,7 +33,6 @@ export function RiscVToBinary(lines: string[], memoryWidth: 8 | 32): Translation
       return;
     }
 
-    // Detecta y registra etiquetas
     const isLabel = /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
     if (isLabel) {
       const labelName = trimmed.replace(':', '');
@@ -47,14 +45,11 @@ export function RiscVToBinary(lines: string[], memoryWidth: 8 | 32): Translation
       return;
     }
 
-    // Analiza la instrucción
     const tokens = trimmed.split(/[\s,()]+/);
     const mnemonic = tokens[0];
 
-    // Las tipo B tienen el label en tokens[3], las tipo J en tokens[2]
     const target = tokens[3] ?? tokens[2];
 
-    // Si es B-type o J-type con posible etiqueta, la dejamos pendiente
     const isBType = mnemonic in bInstructions;
     const isJType = mnemonic in jInstructions;
 
@@ -62,12 +57,11 @@ export function RiscVToBinary(lines: string[], memoryWidth: 8 | 32): Translation
       pendingBranches.push({ lineIndex: i, instruction: trimmed });
     }
 
-    // Ensambla provisionalmente (sin labels)
     const binary =
       assembleRTypeProgressive(trimmed) ||
       assembleITypeProgressive(trimmed) ||
       assembleSTypeProgressive(trimmed) ||
-      assembleBTypeProgressive(trimmed, memoryWidth) || // provisional
+      assembleBTypeProgressive(trimmed, memoryWidth) ||
       assembleSpecialITypeProgressive(trimmed) ||
       assembleUTypeProgressive(trimmed) ||
       assembleJTypeProgressive(trimmed, memoryWidth);
@@ -84,7 +78,6 @@ export function RiscVToBinary(lines: string[], memoryWidth: 8 | 32): Translation
     instructionAddress++;
   });
 
-  // SEGUNDA ETAPA — reensambla las tipo B y tipo J pendientes
   for (const { lineIndex, instruction } of pendingBranches) {
     const tokens = instruction.split(/[\s,()]+/);
     const mnemonic = tokens[0];
@@ -134,7 +127,6 @@ export function BinaryToRiscV(lines: string[], memoryWidth: 8 | 32): Translation
       return;
     }
 
-    // Validar etiqueta (aunque sea binario, puede haber pseudo-etiquetas para branch)
     const isLabel = /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
     if (isLabel) {
       const labelName = trimmed.replace(':', '');
@@ -147,7 +139,6 @@ export function BinaryToRiscV(lines: string[], memoryWidth: 8 | 32): Translation
       return;
     }
 
-    // Decodificar progresivamente cada tipo
     const decoded =
       decodeRTypeProgressive(trimmed) ||
       decodeITypeProgressive(trimmed) ||
@@ -166,16 +157,14 @@ export function BinaryToRiscV(lines: string[], memoryWidth: 8 | 32): Translation
     instructionAddress++;
     output.push(decoded);
 
-    editorToOutput.push(output.length - 1); // editor → output
-    outputToEditor.push(i);                 // output → editor
+    editorToOutput.push(output.length - 1); 
+    outputToEditor.push(i);
   });
 
   return { output, labelMap, errors, editorToOutput, outputToEditor };
 }
 
 
-
-// 1️⃣ Binario → Hexadecimal
 export function BinaryToHex(lines: string[]): TranslationResult {
   const output: string[] = [];
   const errors: { line: number; message: string }[] = [];
@@ -193,8 +182,8 @@ export function BinaryToHex(lines: string[]): TranslationResult {
       const hex = `0x${parseInt(trimmed, 2).toString(16).padStart(8, '0')}`;
       output.push(hex);
 
-      editorToOutput.push(output.length - 1); // editor → output
-      outputToEditor.push(i);                 // output → editor
+      editorToOutput.push(output.length - 1); 
+      outputToEditor.push(i);
     } catch {
       errors.push({ line: i + 1, message: 'Invalid binary string' });
       editorToOutput.push(-1);
@@ -205,7 +194,6 @@ export function BinaryToHex(lines: string[]): TranslationResult {
 }
 
 
-// 2️⃣ Hexadecimal → Binario
 export function HexToBinary(lines: string[]): TranslationResult {
   const output: string[] = [];
   const errors: { line: number; message: string }[] = [];
@@ -223,8 +211,8 @@ export function HexToBinary(lines: string[]): TranslationResult {
       const binary = parseInt(trimmed, 16).toString(2).padStart(32, '0');
       output.push(binary);
 
-      editorToOutput.push(output.length - 1); // editor → output
-      outputToEditor.push(i);                 // output → editor
+      editorToOutput.push(output.length - 1); 
+      outputToEditor.push(i);
     } catch {
       errors.push({ line: i + 1, message: 'Invalid hexadecimal string' });
       editorToOutput.push(-1);
@@ -234,7 +222,6 @@ export function HexToBinary(lines: string[]): TranslationResult {
   return { output, labelMap: {}, errors, editorToOutput, outputToEditor };
 }
 
-// 🔁 RISC-V → RISC-V (normalización progresiva)
 export function RiscVToRiscV(lines: string[], memoryWidth: 8 | 32): TranslationResult {
   const output: string[] = [];
   const labelMap: Record<string, number> = {};
@@ -250,8 +237,6 @@ export function RiscVToRiscV(lines: string[], memoryWidth: 8 | 32): TranslationR
       editorToOutput.push(-1);
       return;
     }
-
-    // Etiquetas
     const isLabel = /^[a-zA-Z_][a-zA-Z0-9_]*:$/.test(trimmed);
     if (isLabel) {
       const labelName = trimmed.replace(':', '');
@@ -264,7 +249,6 @@ export function RiscVToRiscV(lines: string[], memoryWidth: 8 | 32): TranslationR
       return;
     }
 
-    // Ensamblar → decodificar otra vez (para normalizar)
     const binary =
       assembleRTypeProgressive(trimmed) ||
       assembleITypeProgressive(trimmed) ||
@@ -305,8 +289,6 @@ export function RiscVToRiscV(lines: string[], memoryWidth: 8 | 32): TranslationR
 }
 
 
-
-// 🔁 Binario → Binario (normalización progresiva)
 export function BinaryToBinary(lines: string[], memoryWidth: 8 | 32): TranslationResult {
   const output: string[] = [];
   const errors: { line: number; message: string }[] = [];
@@ -319,8 +301,6 @@ export function BinaryToBinary(lines: string[], memoryWidth: 8 | 32): Translatio
       editorToOutput.push(-1);
       return;
     }
-
-    // Decodificar primero
     const decoded =
       decodeRTypeProgressive(trimmed) ||
       decodeITypeProgressive(trimmed) ||
@@ -335,8 +315,6 @@ export function BinaryToBinary(lines: string[], memoryWidth: 8 | 32): Translatio
       editorToOutput.push(-1);
       return;
     }
-
-    // Volver a ensamblar → binario completo
     const reassembled =
       assembleRTypeProgressive(decoded) ||
       assembleITypeProgressive(decoded) ||
@@ -362,7 +340,6 @@ export function BinaryToBinary(lines: string[], memoryWidth: 8 | 32): Translatio
 
 
 
-// 🔁 Hexadecimal → Hexadecimal (normalización progresiva)
 export function HexToHex(lines: string[], memoryWidth: 8 | 32): TranslationResult {
   const output: string[] = [];
   const errors: { line: number; message: string }[] = [];
@@ -377,10 +354,8 @@ export function HexToHex(lines: string[], memoryWidth: 8 | 32): TranslationResul
     }
 
     try {
-      // Paso 1: hex → binario
       const binary = parseInt(trimmed, 16).toString(2).padStart(32, '0');
 
-      // Paso 2: binario → RISC-V
       const decoded =
         decodeRTypeProgressive(binary) ||
         decodeITypeProgressive(binary) ||
@@ -396,7 +371,6 @@ export function HexToHex(lines: string[], memoryWidth: 8 | 32): TranslationResul
         return;
       }
 
-      // Paso 3: volver a ensamblar → binario
       const reassembled =
         assembleRTypeProgressive(decoded) ||
         assembleITypeProgressive(decoded) ||
@@ -412,7 +386,6 @@ export function HexToHex(lines: string[], memoryWidth: 8 | 32): TranslationResul
         return;
       }
 
-      // Paso 4: binario → hex normalizado
       const hex = `0x${parseInt(reassembled, 2).toString(16).padStart(8, '0')}`;
       output.push(hex);
 
@@ -427,23 +400,20 @@ export function HexToHex(lines: string[], memoryWidth: 8 | 32): TranslationResul
   return { output, labelMap: {}, errors, editorToOutput, outputToEditor };
 }
 
-
-
-// 3️⃣ Valor por defecto (no hace conversión)
 export function NoConversion(lines: string[]): TranslationResult {
   const output: string[] = [...lines];
   const editorToOutput: number[] = [];
   const outputToEditor: number[] = [];
 
   lines.forEach((_, i) => {
-    editorToOutput.push(i); // editor → output (mismo índice)
-    outputToEditor.push(i); // output → editor (mismo índice)
+    editorToOutput.push(i); 
+    outputToEditor.push(i); 
   });
 
   return {
     output,
-    labelMap: {},      // Sin etiquetas detectadas
-    errors: [],        // Sin errores
+    labelMap: {},    
+    errors: [],
     editorToOutput,
     outputToEditor
   };

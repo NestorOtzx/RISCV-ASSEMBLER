@@ -36,7 +36,7 @@ describe('Utils', () => {
     it('should convert aliases correctly', () => {
       expect(registerToBinary('t0')).toBe('00101');
       expect(registerToBinary('RA')).toBe('00001');
-      expect(registerToBinary('fp')).toBe('01000'); // alias de s0
+      expect(registerToBinary('fp')).toBe('01000'); 
     });
 
     it('should return 00000 for invalid register', () => {
@@ -51,7 +51,6 @@ describe('Utils', () => {
     });
 
     it('should encode negative numbers correctly', () => {
-      // -1 → 0xFFF (12 bits)
       expect(encodeImmediate12Bits(-1)).toBe('111111111111');
     });
 
@@ -117,7 +116,6 @@ describe('Utils', () => {
 
     it('should return true if hex contains a known opcode', () => {
       const opcode = Object.values(iInstructions)[0].opcode;
-      // Genera un número con esos 7 bits al final
       const num = parseInt(opcode, 2);
       const hex = num.toString(16);
       expect(isValidHexInstruction(hex)).toBeTrue();

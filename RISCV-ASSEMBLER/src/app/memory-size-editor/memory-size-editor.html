@@ -2,22 +2,15 @@
   class="fixed top-0 left-0 h-full bg-slate-800 text-white flex flex-col shadow-xl z-50 transition-transform duration-300
          w-full sm:w-[480px] md:w-[480px] lg:w-[500px]">
 
-  <!-- Header -->
-  <div class="flex items-center justify-between bg-slate-700 border-b border-slate-600 h-12 px-4">
+  <div class="flex items-center justify-between bg-slate-700 border-b border-slate-600 h-12 pl-4 pr-2">
     <h2 class="text-xl font-semibold">Memory Editor</h2>
     <button
       (click)="onCloseClick()"
-      class="sm:hidden bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded transition">
+      class="bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded transition">
       ⮜
     </button>
   </div>
-
-
-
-
-  <!-- Contenido -->
   <div class="flex-1 p-4 overflow-y-auto space-y-6">
-      <!-- ===================== Memory Width ===================== -->
   <div class="memory-controls flex gap-3">
     <button class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded" type="button" (click)="triggerImport()">Import</button>
     <button class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded" type="button" (click)="exportConfiguration()">Export</button>
@@ -27,7 +20,6 @@
     <h3 class="font-semibold mb-2 text-gray-100">Memory Width</h3>
 
     <div class="flex gap-3">
-      <!-- 8-bit button -->
       <button
         class="flex-1 px-3 py-2 rounded-md border transition text-sm font-medium"
         [ngClass]="memoryWidth === 8
@@ -37,7 +29,6 @@
         8-bit
       </button>
 
-      <!-- 32-bit button -->
       <button
         class="flex-1 px-3 py-2 rounded-md border transition text-sm font-medium"
         [ngClass]="memoryWidth === 32
@@ -52,7 +43,6 @@
       Select the bit width used for addressing and data representation.
     </p>
   </div>
-    <!-- ===================== Configuración de Memoria ===================== -->
     <div class="bg-slate-700 p-3 rounded-lg border border-slate-600">
       <h3 class="font-semibold mb-2 text-gray-100">Memory Size</h3>
 
@@ -89,34 +79,27 @@
       
     </div>
 
-    <!-- ===================== Mapa interactivo ===================== -->
     <div class="bg-slate-700 rounded-lg border border-slate-600 p-3">
       <h3 class="font-semibold text-gray-100 mb-3">Memory Mapping</h3>
 
-      <!-- Contenedor visual -->
       <div class="relative border border-slate-500 rounded overflow-hidden bg-slate-900 h-[600px] flex flex-col">
         @for (section of memorySections; track section.name; let i = $index) {
           <div
             [ngStyle]="getSectionStyle(section, i)"
             class="relative justify-center text-sm font-medium border-b border-slate-700 last:border-b-0"
           >
-            <!-- Contenedor principal del texto -->
             <div class="absolute inset-0 flex items-center justify-center text-center px-2 pointer-events-none select-none">
-              <!-- Nombre de la sección centrado -->
               <span class="font-semibold text-white">{{ section.name }}</span>
             </div>
 
-            <!-- Dirección inicial (arriba derecha) -->
             <div class="absolute top-1 right-2 text-[10px] text-gray-300">
               {{ toHex(getSectionStart(i)) }}
             </div>
 
-            <!-- Dirección final (abajo derecha) -->
             <div class="absolute bottom-1 right-2 text-[10px] text-gray-300">
               {{ toHex(section.end) }}
             </div>
 
-            <!-- Input para editar el inicio (flotante entre secciones) -->
             <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10 flex flex-col items-center">
               @if (i > 0) {
                 <input
@@ -127,7 +110,6 @@
                   title="Editar límite inferior de {{ section.name }}"
                 />
               }
-                <!-- ⚠️ Mensaje de error -->
                 @if (section.error) {
                   @if (i == 0) {
                     <span class="text-[10px] text-red-400 mt-3 bg-slate-800 px-1 rounded shadow-sm border border-red-500/50">
@@ -156,14 +138,6 @@
       </button>
     </div>
   </div>
-
-  <!-- Botón lateral visible SOLO en pantallas medianas/grandes -->
-  <button
-    (click)="onCloseClick()"
-    class="hidden sm:block absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-full
-           bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 shadow-lg transition rounded-r-md">
-    ⮜
-  </button>
 
   
 

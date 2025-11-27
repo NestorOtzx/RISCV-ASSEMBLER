@@ -10,12 +10,12 @@
 }
 
 :host ::ng-deep .active-line {
-  background-color: rgba(0, 0, 0, 0.2); /* un poco más claro que bg-gray-900 */
+  background-color: rgba(0, 0, 0, 0.25); 
   padding: 0 8px 0 8px;
 }
 
 :host ::ng-deep .unactive-line {
-  background-color: #1F2937; /* bg-gray-900 */
+  background-color: #1F2937; 
   padding: 0 8px 0 8px;
 }
 
@@ -27,30 +27,36 @@
 ::ng-deep .tooltip {
   position: fixed;
   display: none;
-  background-color: #252526;   /* fondo oscuro estilo VS */
-  color: #dcdcdc;              /* texto claro */
-  padding: 6px 10px;           /* espacio interno */
-  border: 1px solid #454545;   /* borde gris oscuro */
-  font-size: 12px;             /* tamaño pequeño como en VS */
-  font-family: Consolas, monospace; /* tipografía estilo código */
-  max-width: 400px;            /* ancho máximo */
-  white-space: pre-wrap;       /* respetar saltos de línea */
-  pointer-events: none;        /* que no bloquee el mouse */
-  z-index: 9999;               /* encima de todo */
+  background-color: #252526;   
+  color: #dcdcdc;             
+  padding: 6px 10px;           
+  border: 1px solid #454545;  
+  font-size: 12px;             
+  font-family: Consolas, monospace;
+  max-width: 400px;           
+  white-space: pre-wrap;      
+  pointer-events: none;       
+  z-index: 9999;              
 }
 
 
 :host  ::ng-deep .has-label {
-  color: #ffcc00;  /* amarillo */
+  color: #ffcc00; 
   font-weight: bold;
 }
 
-:host  ::ng-deep .instr { color: #4cafef; font-weight: bold; }     /* R-type */
-:host  ::ng-deep .instr-r { color: #4cafef; font-weight: bold; }     /* R-type */
-:host  ::ng-deep .instr-i { color: #81c784; font-weight: bold; }     /* I-type */
-:host  ::ng-deep .instr-s { color: #ffb74d; font-weight: bold; }     /* S-type */
-:host  ::ng-deep .instr-b { color: #e57373; font-weight: bold; }     /* B-type */
-:host  ::ng-deep .instr-j { color: #ba68c8; font-weight: bold; }     /* J-type */
-:host  ::ng-deep .instr-u { color: #ffd54f; font-weight: bold; }     /* U-type */
-:host  ::ng-deep .instr-special { color: #90a4ae; font-weight: bold; } /* especiales */
-:host  ::ng-deep .opcode-bin { color: #81c784; font-weight: bold; } /* especiales */
+:host  ::ng-deep .label-ref {
+  color: #ffcc00; 
+  font-weight: bold;
+}
+
+
+:host  ::ng-deep .instr { color: #4cafef; font-weight: bold; }     
+:host  ::ng-deep .instr-r { color: #4cafef; font-weight: bold; }     
+:host  ::ng-deep .instr-i { color: #81c784; font-weight: bold; }     
+:host  ::ng-deep .instr-s { color: #ffb74d; font-weight: bold; }     
+:host  ::ng-deep .instr-b { color: #e57373; font-weight: bold; }     
+:host  ::ng-deep .instr-j { color: #ba68c8; font-weight: bold; }     
+:host  ::ng-deep .instr-u { color: #ffd54f; font-weight: bold; }     
+:host  ::ng-deep .instr-special { color: #90a4ae; font-weight: bold; } 
+:host  ::ng-deep .opcode-bin { color: #81c784; font-weight: bold; } 

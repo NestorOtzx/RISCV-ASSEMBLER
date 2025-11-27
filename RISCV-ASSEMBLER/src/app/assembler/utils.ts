@@ -50,7 +50,6 @@ export function registerToBinary(reg: string | undefined): string {
 
   const normalized = reg.trim().toLowerCase();
 
-  // Caso 1: formato xN
   if (normalized.startsWith('x')) {
     const regNum = parseInt(normalized.slice(1));
     if (!isNaN(regNum) && regNum >= 0 && regNum <= 31) {
@@ -58,13 +57,11 @@ export function registerToBinary(reg: string | undefined): string {
     }
   }
 
-  // Caso 2: alias estándar (t0, s0, ra, etc.)
   if (normalized in REGISTER_ALIASES) {
     const regNum = REGISTER_ALIASES[normalized];
     return regNum.toString(2).padStart(5, '0');
   }
 
-  // Si no es válido, retorna 00000 (x0)
   return '00000';
 }
 
@@ -75,13 +72,30 @@ export function encodeImmediate12Bits(value: number): string {
 }
 
 export function parseImmediate(token: string): number {
-  if (token.startsWith('0x') || token.startsWith('0X')) {
-    return parseInt(token, 16);
-  } else if (!isNaN(Number(token)) && token.length > 0) {
-    return parseInt(token, 10);
+  if (!token) return 0;
+
+  token = token.trim();
+
+  let sign = 1;
+
+  if (token.startsWith('-')) {
+    sign = -1;
+    token = token.slice(1);
+  } else if (token.startsWith('+')) {
+    token = token.slice(1);
   }
+
+  if (/^0x[0-9a-f]+$/i.test(token)) {
+    return sign * parseInt(token, 16);
+  }
+
+  if (!isNaN(Number(token))) {
+    return sign * parseInt(token, 10);
+  }
+
   return 0;
 }
+
 
 export function isValidRISCVInstruction(line: string): boolean {
   if (!line) return false;
@@ -112,10 +126,9 @@ const allOpcodes = new Set<string>([
 
 export function isValidBinaryInstruction(bin: string): boolean {
   if (!bin) return false;
-  const clean = bin.replace(/[^01]/g, ''); // solo bits
+  const clean = bin.replace(/[^01]/g, ''); 
   if (clean.length === 0) return false;
 
-  // Tomamos hasta los últimos 7 bits
   const candidate = clean.slice(-7).padStart(7, '0');
   return allOpcodes.has(candidate);
 }

@@ -2,7 +2,7 @@ import { sInstructions } from '../instruction-tables';
 import { registerToBinary,  encodeImmediate12Bits, parseImmediate} from '../utils';
 
 export function assembleSTypeProgressive(instruction: string): string | null {
-  const tokens = instruction.trim().split(/[\s,()]+/);  // Soporta formato sw x2, 0(x1)
+  const tokens = instruction.trim().split(/[\s,()]+/);  
   const mnemonic = tokens[0];
   const instrData = sInstructions[mnemonic as keyof typeof sInstructions];
   if (!instrData) return null;
@@ -18,7 +18,6 @@ export function assembleSTypeProgressive(instruction: string): string | null {
     rs1Bin = registerToBinary(tokens[3]);
   }
 
-  // Dividir el inmediato en dos partes: imm[11:5] y imm[4:0]
   const immBin = encodeImmediate12Bits(immVal);
   const immHigh = immBin.substring(0, 7);
   const immLow = immBin.substring(7);
@@ -40,12 +39,11 @@ export function decodeSTypeProgressive(binary: string): string | null {
   const immBin = immHigh + immLow;
   const imm = parseInt(immBin, 2);
 
-  // Buscar instrucción que coincida exactamente con opcode y funct3
   const entry = Object.entries(sInstructions).find(
     ([, data]) => data.opcode === opcode && data.funct3 === funct3
   );
 
-  if (!entry) return null; // Si no se encuentra coincidencia, retornar null
+  if (!entry) return null; 
 
   const mnemonic = entry[0];
   const rs1 = rs1Bin ? `x${parseInt(rs1Bin, 2)}` : '';

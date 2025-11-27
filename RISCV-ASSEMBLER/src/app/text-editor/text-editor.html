@@ -1,29 +1,33 @@
 <div class="flex flex-col w-full h-full border border-gray-600 rounded overflow-hidden bg-gray-800 font-mono relative">
   <div class="absolute top-2 right-2 flex items-center gap-1 bg-transparent rounded">
     @if (editable) {
-    <!-- Undo -->
-    <button
-      data-testid="btn-undo"
-      (click)="undo()"
-      class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
-            bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60"
-      title="Undo">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
-      </svg>
-    </button>
+      <!-- Undo -->
+      <button
+        data-testid="btn-undo"
+        (click)="undo()"
+        class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
+              bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60"
+        title="Undo">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+            d="M7 7l-4 4 4 4M3 11h12a5 5 0 110 10"/>
+        </svg>
+      </button>
 
-    <!-- Redo -->
-    <button
-      data-testid="btn-redo"
-      (click)="redo()"
-      class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
-            bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60"
-      title="Redo">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-      </svg>
-    </button>
+      <!-- Redo -->
+      <button
+        data-testid="btn-redo"
+        (click)="redo()"
+        class="p-1 border border-gray-500 rounded w-7 h-7 flex items-center justify-center 
+              bg-gray-700/30 backdrop-blur-sm hover:bg-gray-700/60"
+        title="Redo">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-200" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+            d="M17 7l4 4-4 4M21 11H9a5 5 0 100 10"/>
+        </svg>
+      </button>
     }
 
     <!-- Copy -->
@@ -69,7 +73,6 @@
   </div>
 
   <div class="flex overflow-auto w-full h-full">
-    <!-- Números de línea -->
     <div class="bg-gray-900 text-gray-400 text-right pt-2 select-none min-w-10 leading-[1.5rem] shrink-0">
       @for (line of lineCounter; track $index) {
         <div class="bg-gray-900 px-2" [attr.data-testid]="'line-number-' + $index">{{ line }}</div>

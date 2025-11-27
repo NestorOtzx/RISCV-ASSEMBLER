@@ -5,8 +5,6 @@ export class TooltipManager {
     this.el.className = 'tooltip';
     this.el.style.position = 'fixed';
     this.el.style.display = 'none';
-    // puedes dar aquí valores por defecto si quieres (padding, font-size...), 
-    // o dejarlos en CSS.
     document.body.appendChild(this.el);
   }
 
