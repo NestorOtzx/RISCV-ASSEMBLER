@@ -1,4 +1,3 @@
-// extrae texto limpio y detecta labels (name + line)
 export function extractContentAndLabels(editorEl: HTMLDivElement) {
   const lines: string[] = [];
 
@@ -7,10 +6,10 @@ export function extractContentAndLabels(editorEl: HTMLDivElement) {
       let text = (child as HTMLElement).innerText || '';
 
       text = text
-        .replace(/\u00A0/g, ' ')   // NBSP -> space
-        .replace(/\u200B/g, '')    // zero-width
-        .replace(/\u2028|\u2029/g, '') // unicode line separators
-        .replace(/\r\n|\r|\n/g, '') // internal newlines
+        .replace(/\u00A0/g, ' ') 
+        .replace(/\u200B/g, '')
+        .replace(/\u2028|\u2029/g, '')
+        .replace(/\r\n|\r|\n/g, '')
         .trim();
 
       lines.push(text);

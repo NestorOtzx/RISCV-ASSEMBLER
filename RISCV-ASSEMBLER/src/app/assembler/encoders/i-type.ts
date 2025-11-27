@@ -53,7 +53,6 @@ export function decodeITypeProgressive(binary: string): string | null {
   const funct7 = immBin.slice(0, 7);
   const shamtBin = immBin.slice(7, 12);
 
-  // 🔹 Buscar coincidencia exacta con opcode + funct3 + funct7 (si aplica)
   let entry = Object.entries(iInstructions).find(
     ([, data]) =>
       data.opcode === opcode &&
@@ -61,7 +60,6 @@ export function decodeITypeProgressive(binary: string): string | null {
       (!data.funct7 || data.funct7 === funct7)
   );
 
-  // 🔸 Si no encontramos por funct7, relajamos la búsqueda
   if (!entry) {
     entry = Object.entries(iInstructions).find(
       ([, data]) => data.opcode === opcode && data.funct3 === funct3
@@ -77,23 +75,19 @@ export function decodeITypeProgressive(binary: string): string | null {
   let imm: number;
 
   if (mnemonic === 'slli' || mnemonic === 'srli' || mnemonic === 'srai') {
-    // Desplazamientos: el inmediato son los bits [7–11]
     imm = parseInt(shamtBin, 2);
   } else {
-    // Inmediato de 12 bits con signo
     const rawImm = parseInt(immBin, 2);
     imm = immBin[0] === '1' ? rawImm - 0x1000 : rawImm;
   }
 
-  // 🔹 Detección de instrucciones tipo carga (usan imm(rs1))
   const isLoad =
-    mnemonic.startsWith('l') && // lw, lb, lh, lbu, lhu
+    mnemonic.startsWith('l') &&
     opcode === '0000011';
 
   if (isLoad) {
     return `${mnemonic} ${rd}, ${imm}(${rs1})`;
   }
 
-  // 🔹 Resto de instrucciones tipo I (usan rd, rs1, imm)
   return `${mnemonic} ${rd}, ${rs1}, ${imm}`;
 }

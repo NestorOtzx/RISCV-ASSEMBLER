@@ -26,14 +26,12 @@ export class TextEditor implements AfterViewInit {
   @Input()
   set lineIndexing(value: 'numbers' | 'direction') {
     this._lineIndexing = value;
-    // recalcula los números de línea con la nueva forma
     const { text } = extractContentAndLabels(this.editor.nativeElement);
     this.updateLineCounter(text);
   }
   @Input()
   set textFormat(value: 'riscv' | 'binary' | 'hexadecimal' | 'text') {
     this._textFormat = value;
-    // recalcula inmediatamente cuando cambia
     if (this.editor) {
       const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
       this.updateLineCounter(text);
@@ -82,7 +80,6 @@ export class TextEditor implements AfterViewInit {
       editorEl.addEventListener("drop", prevent);
       editorEl.addEventListener("dragover", prevent);
       editorEl.addEventListener("mousedown", (e) => {
-        // evita que elementos dentro del editor se vuelvan "draggables"
         const el = e.target as HTMLElement;
         if (el && el.draggable) el.draggable = false;
       });
@@ -98,7 +95,6 @@ export class TextEditor implements AfterViewInit {
     });
 
 
-    // mousemove/leave para tooltip
     editorEl.addEventListener('mousemove', (e) => {
       const target = e.target as HTMLElement | null;
       if (target && target.classList.contains('wrong-line') && target.dataset['error']) {
@@ -109,7 +105,6 @@ export class TextEditor implements AfterViewInit {
     });
     editorEl.addEventListener('mouseleave', () => this.tooltip.hide());
 
-    // input
     editorEl.addEventListener('input', () => {
       ensureFirstLineWrapped(editorEl);
       fixEmptyDivs(editorEl);
@@ -122,97 +117,6 @@ export class TextEditor implements AfterViewInit {
     editorEl.addEventListener('keydown', (event: KeyboardEvent) => {
       const isMac = navigator.platform.toLowerCase().includes('mac');
       const mod = isMac ? event.metaKey : event.ctrlKey;
-
-if (event.key === "Home" && !event.ctrlKey && !event.metaKey) {
-  event.preventDefault();
-
-  const editor = this.editor.nativeElement;
-  const firstDiv = editor.querySelector("div");
-  if (!firstDiv) return;
-
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return;
-
-  const range = document.createRange();
-
-  // punto absoluto de inicio del documento
-  const docStartNode = firstDiv.firstChild || firstDiv;
-  const docStartOffset = 0;
-
-  // SIN SHIFT → solo mover cursor
-  if (!event.shiftKey) {
-    range.setStart(docStartNode, docStartOffset);
-    range.setEnd(docStartNode, docStartOffset);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    return;
-  }
-
-  // CON SHIFT → seleccionar desde inicio del documento hasta posición actual
-  const focusNode = sel.focusNode!;
-  const focusOffset = sel.focusOffset;
-
-  // asegura que no se seleccione fuera del editor
-  if (!editor.contains(focusNode)) return;
-
-  range.setStart(docStartNode, docStartOffset);
-  range.setEnd(focusNode, focusOffset);
-
-  sel.removeAllRanges();
-  sel.addRange(range);
-  return;
-}
-
-
-
-// END → fin absoluto del editor
-if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
-  event.preventDefault();
-
-  const editor = this.editor.nativeElement;
-  const divs = editor.querySelectorAll("div");
-  if (divs.length === 0) return;
-
-  const lastDiv = divs[divs.length - 1];
-
-  const sel = window.getSelection();
-  if (!sel) return;
-
-  const range = document.createRange();
-  const endOffset =
-    lastDiv.lastChild?.textContent?.length ??
-    lastDiv.childNodes.length;
-
-  // SIN SHIFT → cursor al final sin selección
-  if (!event.shiftKey) {
-    if (lastDiv.lastChild) {
-      range.setStart(lastDiv.lastChild, endOffset);
-      range.setEnd(lastDiv.lastChild, endOffset);
-    } else {
-      range.setStart(lastDiv, 0);
-      range.setEnd(lastDiv, 0);
-    }
-  } 
-  // CON SHIFT → extender selección dentro del editor
-  else {
-    const current = sel.focusNode;
-    if (!editor.contains(current)) return; // evita seleccionar fuera
-
-    range.setStart(sel.anchorNode!, sel.anchorOffset);
-
-    if (lastDiv.lastChild) {
-      range.setEnd(lastDiv.lastChild, endOffset);
-    } else {
-      range.setEnd(lastDiv, 0);
-    }
-  }
-
-  sel.removeAllRanges();
-  sel.addRange(range);
-  return;
-}
-
-
 
       if (mod && !event.shiftKey && event.key.toLowerCase() === 'z') {
         event.preventDefault();
@@ -260,7 +164,6 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
             }
           }
 
-          // restaurar selección REAL
           if (selInfo) restoreSelection(editorEl, selInfo);
 
         } else {
@@ -274,7 +177,6 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
         return;
       }
 
-      // SHIFT + TAB → desindentar
       if (event.key === 'Tab' && event.shiftKey) {
         event.preventDefault();
 
@@ -296,7 +198,6 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
 
        const selInfo = getLineAndOffset(editorEl);
 
-      // desindentar línea por línea
       for (let i = first; i <= last; i++) {
         const div = divs[i];
         const node = div.firstChild;
@@ -316,7 +217,6 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
         }
       }
 
-      // restaurar selección REAL (estable)
       if (selInfo) restoreSelection(editorEl, selInfo);
       }
 
@@ -334,7 +234,6 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
       }
     });
 
-    // mouse/keyboard selection updates
     editorEl.addEventListener('keyup', () => this.highlightActiveLine());
     editorEl.addEventListener('mouseup', () => this.highlightActiveLine());
     document.addEventListener('selectionchange', () => {
@@ -455,7 +354,6 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
     const editorEl = this.editor.nativeElement;
     const divs = Array.from(editorEl.querySelectorAll('div'));
 
-    // Si no hay líneas o el índice no existe → limpiar todas las clases
     if (lineIndex < 0 || lineIndex >= divs.length) {
       divs.forEach(div => {
         div.classList.remove('active-line', 'unactive-line');
@@ -497,12 +395,6 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
   }
 
   setContent(text: string) {
-    if (this.editable)
-    {
-      console.log("Set content editable");
-    }else{
-      console.log("Set content noeditable");
-    }
     const editorEl = this.editor.nativeElement;
     editorEl.innerHTML = '';
     text.split(/\r?\n/).forEach(line => {
@@ -528,17 +420,12 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
     this.contentChange.emit(textin);
     const { text, labels } = extractContentAndLabels(this.editor.nativeElement);
     this.updateLineCounter(text);
-    console.log("Hightlight text "+text + " with format "+this._textFormat);
     highlightText(this.editor.nativeElement, labels, this._textFormat);
   }
 
   private updateLineCounter(text: string) {
     const rawLines = text.split('\n');
     const result: string[] = [];
-    if (this.editable)
-    {
-      console.log("update line counter!"+this._textFormat + text);
-    }
     let lineNumber = 1;
     for (let i = 0; i<rawLines.length; i++) {
       const raw = rawLines[i]
@@ -548,12 +435,11 @@ if (event.key === "End" && !event.ctrlKey && !event.metaKey) {
         lineNumber++;
       }else if (this._textFormat == "binary")
       {
-        //todo: check if valid binary line
         if (clean.length > 0 && isValidBinaryInstruction(clean)) {
           result.push(this.getLineIndex(lineNumber));
           lineNumber++;
         } else {
-          result.push('\u00A0'); // espacio si no es válida
+          result.push('\u00A0');
         }
       }else if (this._textFormat == "hexadecimal")
       {

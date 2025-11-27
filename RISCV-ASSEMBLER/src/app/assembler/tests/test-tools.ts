@@ -1,5 +1,5 @@
 export function normalizeRegisters(instr: string | undefined | null): string {
-  if (!instr) return ''; // Manejo seguro de null/undefined
+  if (!instr) return '';
 
   const map: Record<string, string> = {
     zero: 'x0',
@@ -40,7 +40,6 @@ export function normalizeRegisters(instr: string | undefined | null): string {
   let normalized = instr;
 
   for (const [alias, canonical] of Object.entries(map)) {
-    // Evita reemplazar si el alias está precedido por 0x o -0x
     const regex = new RegExp(`(?<!0x)(?<!-0x)\\b${alias}\\b`, 'g');
     normalized = normalized.replace(regex, canonical);
   }
@@ -50,14 +49,11 @@ export function normalizeRegisters(instr: string | undefined | null): string {
 
 
 export function normalizeImmediates(instruction: string): string {
-  // Coincide con cualquier número o inmediato hexadecimal después de coma o espacio
   return instruction.replace(/([,\s])(-?0x[0-9a-fA-F]+|\b-?\d+\b)/g, (_, sep, imm) => {
     let value = 0;
     if (imm.startsWith('0x') || imm.startsWith('-0x')) {
-      // Convierte hexadecimal (soporta negativos)
       value = parseInt(imm, 16);
     } else {
-      // Es decimal
       value = parseInt(imm, 10);
     }
     return `${sep}${value}`;

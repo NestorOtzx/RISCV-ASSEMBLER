@@ -50,7 +50,6 @@ export function registerToBinary(reg: string | undefined): string {
 
   const normalized = reg.trim().toLowerCase();
 
-  // Caso 1: formato xN
   if (normalized.startsWith('x')) {
     const regNum = parseInt(normalized.slice(1));
     if (!isNaN(regNum) && regNum >= 0 && regNum <= 31) {
@@ -58,13 +57,11 @@ export function registerToBinary(reg: string | undefined): string {
     }
   }
 
-  // Caso 2: alias estándar (t0, s0, ra, etc.)
   if (normalized in REGISTER_ALIASES) {
     const regNum = REGISTER_ALIASES[normalized];
     return regNum.toString(2).padStart(5, '0');
   }
 
-  // Si no es válido, retorna 00000 (x0)
   return '00000';
 }
 
@@ -81,7 +78,6 @@ export function parseImmediate(token: string): number {
 
   let sign = 1;
 
-  // Detectar signo al inicio
   if (token.startsWith('-')) {
     sign = -1;
     token = token.slice(1);
@@ -89,12 +85,10 @@ export function parseImmediate(token: string): number {
     token = token.slice(1);
   }
 
-  // Hexadecimal
   if (/^0x[0-9a-f]+$/i.test(token)) {
     return sign * parseInt(token, 16);
   }
 
-  // Decimal con signo ya aplicado
   if (!isNaN(Number(token))) {
     return sign * parseInt(token, 10);
   }
@@ -132,10 +126,9 @@ const allOpcodes = new Set<string>([
 
 export function isValidBinaryInstruction(bin: string): boolean {
   if (!bin) return false;
-  const clean = bin.replace(/[^01]/g, ''); // solo bits
+  const clean = bin.replace(/[^01]/g, ''); 
   if (clean.length === 0) return false;
 
-  // Tomamos hasta los últimos 7 bits
   const candidate = clean.slice(-7).padStart(7, '0');
   return allOpcodes.has(candidate);
 }

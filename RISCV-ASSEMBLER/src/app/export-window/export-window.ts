@@ -151,11 +151,6 @@ endmodule
     }
   }
 
-  /**
-   * Genera el contenido HDL dividiendo las instrucciones en partes según memoryWidth.
-   * Si memoryWidth = 8, cada instrucción (de 32 bits) se divide en 4 bytes.
-   * Si memoryWidth = 32, se usa tal cual.
-   */
   private generateHDL(
   template: string,
   lines: string[],

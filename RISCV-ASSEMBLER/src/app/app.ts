@@ -109,7 +109,6 @@ export class App {
 
   convertTextToFormat(lines: string[], from_format: string, to_format: string): TranslationResult | null
   {
-    console.log("convert text to format from:"+from_format + " to: "+to_format);
     let result: TranslationResult | null;
     let memoryWidthTyped: 8 | 32;
     if (this.memoryWidth == 32)
@@ -156,20 +155,11 @@ export class App {
     return this.memoryWidth === 32 ? 32 : 8;
   }
 
-    /**
-   * Tamaño direccionable lógico (número de direcciones) que pasaremos a ExportWindow.
-   * Calculado como: memorySize (bytes) / (memoryWidth / 8).
-   */
   get exportInitialMemSize(): number {
     const bytesPerAddr = this.memoryWidth / 8 || 1;
     return Math.floor(this.memorySize / bytesPerAddr);
   }
 
-  /**
-   * Dirección lógica donde inicia la sección "Text".
-   * Buscamos la sección 'Text', tomamos el 'end' del segmento anterior (en bytes)
-   * y lo convertimos a direcciones lógicas (división por bytesPerAddr).
-   */
   get exportInitialStartAddress(): number {
     const idx = this.memorySections.findIndex(s => s.name === 'Text');
     if (idx === -1) return 0;
@@ -206,7 +196,6 @@ export class App {
     }
   }
 
-  // Línea activa → output
   updateActiveOutputLine() {
     const editorLine = this.inputActiveLine();
     const mapping = this.compiled()?.editorToOutput;
@@ -220,7 +209,7 @@ export class App {
 
   onEditorChange(content: string) {
     this.inputText.set(content);
-    if (this.selectedConvertMethod() === 'automatic') this.convertInputToOutput(); // solo si autoAssemble
+    if (this.selectedConvertMethod() === 'automatic') this.convertInputToOutput();
   }
 
   onSelectedConvertMethod(event: Event) {
@@ -229,14 +218,11 @@ export class App {
   }
 
   onInputActiveLineChange(line: number) {
-    console.log("input active line changed to", line);
     this.inputActiveLine.set(line);
     this.updateActiveOutputLine();
   }
 
   onOutputActiveLineChange(line: number) {
-    console.log("output active line changed to", line);
-
     this.outputActiveLine.set(line);
     this.editor.setActiveLineByIndex(this.compiled()?.outputToEditor[line] ?? -1)
   }
@@ -268,7 +254,6 @@ export class App {
   }
 
   updateInputFormats(prev: string, current: string) {
-    console.log("input format change "+prev + " "+ current);
     if (prev !== current) {
       this.editor.setContent(this.convertTextToFormat(this.inputText().split('\n'), prev, current)?.output.join('\n')||'')
 
@@ -292,13 +277,10 @@ export class App {
   downloadOutput() {
     const format = this.selectedOutputFormat();
     let extension = 'txt';
-    //const blob = new Blob([this.outputTextSignal()], { type: 'text/plain;charset=utf-8' });
-    //saveAs(blob, `output.${extension}`);
   }
 
   openExportWindow() {
     this.showExportWindow = true;
-    // Espera un ciclo para asegurar que el componente esté montado
     setTimeout(() => {
       this.exportWindow.setContent(this.outputText);
     });

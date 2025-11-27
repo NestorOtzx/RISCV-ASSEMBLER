@@ -31,6 +31,7 @@ export interface Label {
 export function highlightRiscV(editorEl: HTMLElement, labels: Label[]) {
   const selection = window.getSelection();
   let caretInfo: { divIndex: number; offset: number } | null = null;
+
   try {
     if (selection && selection.rangeCount > 0 && selection.isCollapsed) {
       const range = selection.getRangeAt(0);
@@ -50,12 +51,10 @@ export function highlightRiscV(editorEl: HTMLElement, labels: Label[]) {
     caretInfo = null;
   }
 
-  // --- limpiar labels previos ---
   editorEl.querySelectorAll("div").forEach(div => {
     div.classList.remove("has-label");
   });
 
-  // --- aplicar labels ---
   labels.forEach(label => {
     const div = editorEl.querySelectorAll("div")[label.line - 1];
     if (!div) return;
@@ -65,41 +64,10 @@ export function highlightRiscV(editorEl: HTMLElement, labels: Label[]) {
     }
   });
 
-  // --- procesar cada línea ---
   Array.from(editorEl.querySelectorAll("div")).forEach(div => {
-    const text = div.textContent ?? "";
-    const leadingWsMatch = text.match(/^\s*/); // espacios/tabs al inicio
-    const leading = leadingWsMatch ? leadingWsMatch[0] : "";
-    const trimmed = text.slice(leading.length);
-
-    const tokens = trimmed.split(/\s+/);
-
-    if (tokens.length >= 2 && tokens[0]) {
-      const instr = tokens[0];
-      const rest = trimmed.slice(instr.length);
-
-      // si ya está resaltada, no volver a hacerlo
-      const span = div.querySelector("span");
-      if (span && span.textContent === instr) return;
-
-      const instrSpan = document.createElement("span");
-      const type = allInstructions[instr];
-      instrSpan.className = `instr-${type}`;
-      instrSpan.textContent = instr;
-
-      div.innerHTML = "";
-      div.append(document.createTextNode(leading));
-      div.append(instrSpan);
-      div.append(document.createTextNode(rest));
-    } else {
-      // limpiar cualquier span y dejar la línea tal cual
-      if (div.querySelector("span")) {
-        div.textContent = text;
-      }
-    }
+    applyHighlightToDiv(div);
   });
 
-  // --- restaurar cursor ---
   if (caretInfo) {
     try {
       const newDiv = editorEl.querySelectorAll("div")[caretInfo.divIndex] as HTMLDivElement | undefined;
@@ -114,11 +82,63 @@ export function highlightRiscV(editorEl: HTMLElement, labels: Label[]) {
           sel.addRange(newRange);
         }
       }
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   }
 }
+
+function applyHighlightToDiv(div: HTMLDivElement) {
+  const fullText = div.textContent ?? "";
+
+  const leadingMatch = fullText.match(/^\s*/)?.[0] ?? "";
+  const trimmed = fullText.slice(leadingMatch.length);
+
+  if (trimmed.length === 0) {
+    const span = div.querySelector("span");
+    if (span) span.remove();
+    return;
+  }
+
+  const tokens = trimmed.split(/\s+/);
+  const instr = tokens[0];
+  const instrType = allInstructions[instr];
+
+  const nodes = Array.from(div.childNodes);
+
+  let textNode = nodes.find(n => n.nodeType === Node.TEXT_NODE) as Text | null;
+  if (!textNode) {
+    textNode = document.createTextNode(fullText);
+    div.insertBefore(textNode, div.firstChild);
+  }
+
+  let rest = trimmed.slice(instr.length);
+
+  if (!instrType) {
+    const span = div.querySelector("span");
+    if (span) span.remove();
+    textNode.textContent = fullText; 
+    return;
+  }
+
+  textNode.textContent = leadingMatch;
+
+  let span = div.querySelector("span");
+  if (!span) {
+    span = document.createElement("span");
+    textNode.after(span);
+  }
+
+  span.className = `instr-${instrType}`;
+  span.textContent = instr;
+
+  let restNode = span.nextSibling;
+  if (!restNode || restNode.nodeType !== Node.TEXT_NODE) {
+    restNode = document.createTextNode(rest);
+    span.after(restNode);
+  } else {
+    restNode.textContent = rest;
+  }
+}
+
 
 export function highlightText(editorEl: HTMLElement, labels: Label[], textFormat: 'riscv' | 'binary' | 'hexadecimal' | 'text') {
   if (textFormat == "text"){
@@ -127,7 +147,6 @@ export function highlightText(editorEl: HTMLElement, labels: Label[], textFormat
 
   }else if (textFormat == "hexadecimal")
   {
-
   }
   else{
     highlightRiscV(editorEl, labels)

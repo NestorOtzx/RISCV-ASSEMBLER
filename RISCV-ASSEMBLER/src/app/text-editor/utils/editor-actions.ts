@@ -75,11 +75,9 @@ export function handlePaste(
     lastInserted.textContent = (lastInserted.textContent || '') + afterText;
   }
 
-  // ✅ Normalización DOM que antes destruía el cursor
   fixEmptyDivs(editorEl);
   ensureFirstLineWrapped(editorEl);
 
-  // ✅ Re-obtener div real después de normalización
   let targetDiv = lastInserted;
 
   if (!targetDiv.parentNode) {
@@ -106,7 +104,6 @@ export function handlePaste(
     if (afterText) offset -= afterText.length;
   }
 
-  // ✅ Restaurar selección real
   const newRange = document.createRange();
   newRange.setStart(textNode, Math.max(0, Math.min(offset, textNode.length)));
   newRange.collapse(true);
@@ -123,8 +120,6 @@ export function handlePaste(
     highlightActiveLine();
   }
 }
-
-
 
 function getTextBeforeRange(div: HTMLDivElement, range: Range): string {
   const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT, null);

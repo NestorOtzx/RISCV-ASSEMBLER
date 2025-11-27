@@ -22,7 +22,6 @@ export const rInstructions = {
 };
 
 export const iInstructions: { [key: string]: Instruction } = {
-  // ALU Immediate Instructions
   addi:  { funct3: '000', opcode: '0010011', funct7: '0000000' },
   xori:  { funct3: '100', opcode: '0010011', funct7: '0000000' },
   ori:   { funct3: '110', opcode: '0010011', funct7: '0000000' },
@@ -33,7 +32,6 @@ export const iInstructions: { [key: string]: Instruction } = {
   slti:  { funct3: '010', opcode: '0010011', funct7: '0000000' },
   sltiu: { funct3: '011', opcode: '0010011', funct7: '0000000' },
 
-  // LOAD Instructions
   lb:    { funct3: '000', opcode: '0000011' },
   lh:    { funct3: '001', opcode: '0000011' },
   lw:    { funct3: '010', opcode: '0000011' },

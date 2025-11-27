@@ -25,7 +25,6 @@ export function decodeRTypeProgressive(binary: string): string | null {
   const rs1Bin = padded.slice(12, 17);
   const rs2Bin = padded.slice(7, 12);
 
-  // Buscar instrucción que coincida exactamente con opcode, funct3 y funct7
   const entry = Object.entries(rInstructions).find(
     ([, data]) =>
       data.opcode === opcode &&
@@ -33,7 +32,7 @@ export function decodeRTypeProgressive(binary: string): string | null {
       (!data.funct7 || data.funct7 === funct7)
   );
 
-  if (!entry) return null; // Si no se encuentra coincidencia exacta, retornar null
+  if (!entry) return null; 
 
   const mnemonic = entry[0];
   const rd = rdBin ? `x${parseInt(rdBin, 2)}` : '';
